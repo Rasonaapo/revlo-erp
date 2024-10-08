@@ -1,0 +1,66 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="{% static 'plugin/libs/dropify/css/dropify.min.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/dropify/js/dropify.min.js' %}"></script>
+{% endblock %}
+
+
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+
+
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST" id="save-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <span class="text-mute text-primary mb-2">Upload a great photo of {{ employee }}</span>
+
+                   
+                    <div class="row">
+                        <!-- First column -->            
+                        <div class="mb-3">
+                            <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+                            <input type="file" accept="image/*" id="{{ form.avatar.id_for_label }}" name="{{ form.photo.name }}"
+                                data-default-file="{{ form.instance.photo.url }}" data-plugins="dropify" class="dropify" data-max-file-size="2M" />
+                        
+                            <p class="text-muted text-center mt-2 mb-0">Max File size 2M</p>
+                        </div>     
+                    </div>
+
+                    <p class="mt-2">
+                        <a href="{% url 'employee-list' %}">
+                            <button type="button" id="cancel-btn" class="btn btn-md btn-outline-danger rounded-pill">Cancel</button>
+                        </a>
+                        <button type="submit" id="save-btn" class="btn btn-md btn-outline-dark rounded-pill">Save Record</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $('document').ready(function(){
+        0 < $('[data-plugins="dropify"]').length &&
+        $('[data-plugins="dropify"]').dropify({
+            messages: { default: "Drag and drop a file here or click", replace: "Drag and drop or click to replace", remove: "Remove", error: "Ooops, something wrong appended." },
+            error: { fileSize: "The file size is too big (2M max)." },
+        });
+    
+    });
+</script> 
+{% endblock %}

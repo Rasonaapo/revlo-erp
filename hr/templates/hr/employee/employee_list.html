@@ -1,0 +1,68 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %} 
+    {% if employee_list %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+
+                   <a href="{% url 'employee-add' %}">
+                    <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Staff
+                    </button>
+                   </a>
+
+                    <table class="table table-hover">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Photo</th>
+                              <th>Name</th>
+                              <th>Staff ID</th>
+                              <th>Age</th>
+                              <th>Phone</th>
+                              <th>Department</th>
+                              <th>Hire Date</th>
+                              <th>Grade </th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                        {% for employee in employee_list %}
+                           <tr>
+                              <td>{{ forloop.counter }}</td>
+                              <td style="width: 36px">
+                                <img src="{{ employee.photo.url }}" alt="contact-img" title="contact-img" class="rounded-circle avatar-sm">
+                              </td>
+                              <td>{{ employee }}</td>
+                              <td>{{ employee.employee_id }} </td>
+                              <td>{{ employee.get_age }}</td>
+                              <td>{{ employee.format_phone_number }}</td>
+                              <td>{{ employee.department }}</td>
+                              <td>{{ employee.hire_date|date:'d M, Y'}}</td>
+                              <td>{{ employee.salary_grade.grade }}</td>
+                              <td>{{ employee.created_at|date:'d M, Y'}}</td>
+                              <td>
+                                    <a href="{% url 'employee-update' employee.pk %}" title="Edit employee "><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                                    <a href="{% url 'employee-photo-upload' employee.pk %}" title="Upload employee photo "><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fe-camera"></i></button></a>
+
+                                    <a href="{% url 'employee-delete' employee.pk %}" title="Delete employee profile"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
+                            </td>
+
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no employee records in the system.  <a href="{% url 'employee-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
+        </div>
+    {% endif %} 
+{% endblock %}

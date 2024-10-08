@@ -1,0 +1,30 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+<div class="row">
+    <div class="col-lg-3"></div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST" id="save-form" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    
+                    <p class="mt-2">
+                        <a href="{% url 'department-list' %}">
+                         <button type="button" id="cancel-btn" class="btn btn-md btn-outline-danger rounded-pill">Cancel</button>     
+                        </a>
+                        <button type="submit" id="save-btn" class="btn btn-md btn-outline-dark rounded-pill">Save Record</button>     
+
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %} 
+    {% if job_list %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+
+                   <a href="{% url 'job-add' %}">
+                    <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Job
+                    </button>
+                   </a>
+
+                    <table class="table table-hover">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Employee</th>
+                              <th>Job</th>
+                              <th>Department</th>
+                              <th>Start Date</th>
+                              <th>End Date</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for jhistory in job_history_list %}
+                           <tr>
+                              <td>{{ forloop.counter }}</td>
+                              <td>{{ jhistory.employee }}</td>
+                              <td>{{ jhistory.job }} </td>
+                              <td>{{ jhistory.department }}</td>
+                              <td>{{ job.start_date|date:'d M, Y'}}</td>
+                              <td>{{ job.end_date|date:'d M, Y'}}</td>
+                              <td>{{ job.created_at|date:'d M, Y'}}</td>
+                              <td>
+                                    <a href="{% url 'job-history-update' jhistory.pk %}" title="Edit employee job history"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                                    <a href="{% url 'job-history-delete' job.pk %}" title="Delete employee job history"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
+                            </td>
+
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no job history records in the system.  <a href="{% url 'job-history-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
+        </div>
+    {% endif %} 
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %} 
+    {% if salarygrade_list %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+
+                    <a href="{% url 'salarygrade-add' %}">
+                        <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                            <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Grade
+                        </button>
+                       </a>
+
+                    <table class="table table-hover">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Grade</th>
+                              <th>Step</th>
+                              <th>Basic Salary</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for sg in salarygrade_list %}
+                           <tr>
+                              <td>{{ forloop.counter }}</td>
+                              <td>{{ sg.grade }}</td>
+                              <td>{{ sg.step }}</td>
+                              <td>{{ sg.get_currency_symbol }}{{ sg.amount|default:'-' }}</td>
+                              <td>{{sg.created_at|date:'d M, Y'}}</td>
+                              <td>
+
+                                    <a href="{% url 'salarygrade-update' sg.pk %}" title="Edit salary grade"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                                    <a href="{% url 'salarygrade-delete' sg.pk %}" title="Delete salary grade"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>
+                                  
+                            </td>
+
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no salary grades in the system.  <a href="{% url 'salarygrade-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
+        </div>
+    {% endif %} 
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/flatpickr/flatpickr.min.css' %} rel="stylesheet" type="text/css" />
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+<script src="{% static 'plugin/libs/flatpickr/flatpickr.min.js' %}"></script>
+
+{% endblock %}
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+<div class="row">
+    <div class="col-lg-3"></div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST" id="save-form" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    
+                    <p class="mt-2">
+                        <a href="{% url 'job-history-list' %}">
+                         <button type="button" id="cancel-btn" class="btn btn-md btn-outline-danger rounded-pill">Cancel</button>     
+                        </a>
+                        <button type="submit" id="save-btn" class="btn btn-md btn-outline-dark rounded-pill">Save Record</button>     
+
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $('document').ready(function(){
+
+        $('.select').select2();
+        $('.dateinput').flatpickr({ altInput: !0, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+
+
+    });
+</script> 
+
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/flatpickr/flatpickr.min.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+<script src="{% static 'plugin/libs/flatpickr/flatpickr.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+
+
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST" id="save-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <span class="text-mute text-primary mb-2">Biodata or Personal Info</span>
+
+                   
+                    <div class="row">
+                        <!-- First column -->
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                {{ form.first_name|as_crispy_field }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.employee_id|as_crispy_field }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.dob|as_crispy_field }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.ssnit|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <!-- Second column -->
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                {{ form.last_name|as_crispy_field }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.phone_number|as_crispy_field }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.email|as_crispy_field }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.tin|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="text-mute text-primary mb-2">Bank Info</span>
+                    <div class="row">
+                        <div class="col-md-12">
+                            {{ form.bank|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">                 
+                        <div class="col-md-6">
+                            {{ form.branch|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-6">
+                            {{ form.account_number|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <span class="text-mute text-primary mb-2">Department & Salary Info</span>
+                    <div class="row">                 
+                        <div class="col-md-6">
+                            {{ form.department|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-3">
+                            {{ form.hire_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.salary_grade|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <p class="mt-2">
+                        <a href="{% url 'employee-list' %}">
+                            <button type="button" id="cancel-btn" class="btn btn-md btn-outline-danger rounded-pill">Cancel</button>
+                        </a>
+                        <button type="submit" id="save-btn" class="btn btn-md btn-outline-dark rounded-pill">Save Record</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $('document').ready(function(){
+        $('.select').select2();
+        $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+    });
+</script> 
+{% endblock %}

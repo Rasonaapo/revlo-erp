@@ -1,0 +1,75 @@
+{% if messages %}
+<br />
+<ul class="messages">
+  {% for message in messages %}
+  <div
+    class="alert alert-{% if message.tags %}{{message.tags}}{% endif %} alert-dismissible fade show"
+    role="alert"
+  >
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
+    {{message}}
+  </div>
+  {% endfor %}
+</ul>
+{% endif %} 
+
+{% comment %} {% if form.errors %}
+<ul class="row">
+  {% for field_with_error, error_messages in form.errors.items %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
+    {{field_with_error}} {{error_messages}}
+  </div>
+  {% endfor %}
+</ul>
+{% endif %} {% endcomment %}
+
+<!-- Non-field errors -->
+{% if form.non_field_errors %}
+<ul class="row">
+  {% for error in form.non_field_errors %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
+    {{error}}
+  </div>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if form.errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <button
+  type="button"
+  class="btn-close"
+  data-bs-dismiss="alert"
+  aria-label="Close"
+></button>
+
+    <strong>Please fix the following errors:</strong>
+    <ul>
+        {% for field in form %}
+            {% for error in field.errors %}
+                <li>{{ field.label }}: {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

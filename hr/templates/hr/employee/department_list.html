@@ -1,0 +1,56 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %} 
+    {% if department_list %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+
+                   <a href="{% url 'department-add' %}">
+                    <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Dept.
+                    </button>
+                   </a>
+
+                    <table class="table table-hover">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Department Name</th>
+                              <th>Manager</th>
+                              <th>Location</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for dept in department_list %}
+                           <tr>
+                              <td>{{ forloop.counter }}</td>
+                              <td>{{ dept.department_name }}</td>
+                              <td>{{ dept.manager|default:'-' }}</td>
+                              <td>{{ dept.location }}</td>
+                              <td>{{ dept.created_at|date:'d M, Y'}}</td>
+                              <td>
+
+                                    <a href="{% url 'department-update' dept.pk %}" title="Edit department"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                                    <a href="{% url 'department-delete' dept.pk %}" title="Delete department"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>
+                                  
+                            </td>
+
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no department records in the system.  <a href="{% url 'department-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
+        </div>
+    {% endif %} 
+{% endblock %}

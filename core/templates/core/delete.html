@@ -1,0 +1,41 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="card mt-3">
+            <div class="card-body">
+                <center>
+                <p>Are you sure you want to delete <strong>"{{obj}}"?</strong></p>
+                <div class="row">
+                    <div class="col-lg-6">
+                        <a href="{{ request.META.HTTP_REFERER }}">
+                            <button class="btn btn-outline-info rounded-pill">
+                            <i class="fe-arrow-left" style="font-size:20px"></i>
+                            Go Back
+                            </button>
+                        </a>
+                    </div>
+                    <div class="col-lg-6">
+                        <form class="form" action="" method="POST">
+                            {% csrf_token %}
+        
+                      <button class="btn btn-outline-danger rounded-pill" type="submit">
+                        <i class="fe-trash-2" style="font-size:20px"></i>
+                        Yes Delete
+                      </button>
+                    </form>
+                    </div>
+                </div>
+                </center>
+            </div>
+        </div>
+    </div>
+  </div>
+
+
+{% endblock content%}
