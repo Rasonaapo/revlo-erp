@@ -34,12 +34,12 @@
                               <td>{{ jhistory.employee }}</td>
                               <td>{{ jhistory.job }} </td>
                               <td>{{ jhistory.department }}</td>
-                              <td>{{ job.start_date|date:'d M, Y'}}</td>
-                              <td>{{ job.end_date|date:'d M, Y'}}</td>
-                              <td>{{ job.created_at|date:'d M, Y'}}</td>
+                              <td>{{ jhistory.start_date|date:'d M, Y'}}</td>
+                              <td>{{ jhistory.end_date|date:'d M, Y'}}</td>
+                              <td>{{ jhistory.created_at|date:'d M, Y'}}</td>
                               <td>
                                     <a href="{% url 'job-history-update' jhistory.pk %}" title="Edit employee job history"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
-                                    <a href="{% url 'job-history-delete' job.pk %}" title="Delete employee job history"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
+                                    <a href="{% url 'job-history-delete' jhistory.pk %}" title="Delete employee job history"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
                             </td>
 
                             </tr>
