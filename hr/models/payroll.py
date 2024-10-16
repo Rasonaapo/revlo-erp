@@ -43,3 +43,19 @@ class Bank(models.Model):
 
     def __str__(self):
         return self.bank_name
+    
+
+class Tax(models.Model):
+    year = models.PositiveIntegerField()  
+    block = models.FloatField(null=True, blank=True)  
+    rate = models.FloatField(null=True, blank=True)
+    active = models.BooleanField(default=True)  
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)  
+
+    class Meta:
+        verbose_name_plural = 'Taxes'  # makes the admin plural nicer
+
+    def __str__(self):
+        return f"Tax for year {self.year} - Block: {self.block}, Rate: {self.rate}"
+

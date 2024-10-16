@@ -19,6 +19,8 @@
                           <tr>
                               <th>#</th>
                               <th>Job Title</th>
+                              <th>Department</th>
+                              <th>No. Staff</th>
                               <th>Min Salary</th>
                               <th>Max Salary</th>
                               <th>Created on</th>
@@ -30,6 +32,8 @@
                            <tr>
                               <td>{{ forloop.counter }}</td>
                               <td>{{ job.job_title }}</td>
+                              <td>{{ job.department.department_name }}</td>
+                              <td>{{ job.employee_count|default:'-' }}</td>
                               <td>{{ job.get_currency_symbol }} {{ job.min_salary|default:'-' }}</td>
                               <td>{{ job.get_currency_symbol }} {{ job.max_salary|default:'-' }}</td>
 

@@ -64,41 +64,66 @@
                     </div>
 
                     <span class="text-mute text-primary mb-2">Bank Info</span>
-                    <div class="row">
-                        <div class="col-md-12">
+                    <div class="row mb-2">
+                        <div class="col-md-6">
                             {{ form.bank|as_crispy_field }}
                         </div>
-                    </div>
-                    <div class="row mb-3">                 
-                        <div class="col-md-6">
+
+                        <div class="col-md-3">
                             {{ form.branch|as_crispy_field }}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             {{ form.account_number|as_crispy_field }}
                         </div>
                     </div>
 
-                    <span class="text-mute text-primary mb-2">Department & Salary Info</span>
-                    <div class="row">                 
+
+                    <span class="text-mute text-primary mb-2">Job/Department & Salary Info</span>
+                    <div class="row mb-2">                 
                         <div class="col-md-6">
-                            {{ form.department|as_crispy_field }}
+                            {{ form.job|as_crispy_field }}
+                            {{ form.status|as_crispy_field }}
+
                         </div>
 
                         <div class="col-md-3">
                             {{ form.hire_date|as_crispy_field }}
                         </div>
                         <div class="col-md-3">
-                            {{ form.salary_grade|as_crispy_field }}
+                            {{ form.salary_grade|as_crispy_field }} 
+
                         </div>
                     </div>
                     
+                    <span class="text-mute text-primary mt-4">National ID Info</span>
+                    <div class="row mb-2">                 
+                        <div class="col-md-6">
+                            {{ form.id_type|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-6">
+                            {{ form.id_number|as_crispy_field }}
+                        </div>
+                    </div> 
+
+                    <span class="text-mute text-primary mt-4">Guarantor's Info</span>                  
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ guarantor_form.guarantor_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ guarantor_form.guarantor_phone_number|as_crispy_field }}
+                        </div>
+                    </div>
+
                     <p class="mt-2">
                         <a href="{% url 'employee-list' %}">
-                            <button type="button" id="cancel-btn" class="btn btn-md btn-outline-danger rounded-pill">Cancel</button>
+                            <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
                         </a>
-                        <button type="submit" id="save-btn" class="btn btn-md btn-outline-dark rounded-pill">Save Record</button>
-                    </p>
+                        <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                    </p>     
+
                 </form>
             </div>
         </div>
@@ -111,6 +136,7 @@
     $('document').ready(function(){
         $('.select').select2();
         $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+
     });
 </script> 
 {% endblock %}

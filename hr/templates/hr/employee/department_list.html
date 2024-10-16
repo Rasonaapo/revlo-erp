@@ -1,56 +1,89 @@
 {% extends 'core/base.html' %} 
 {% load static %} 
 
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+
+{% endblock %}
+
+{% block scripts %}
+{% comment %} <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script> {% endcomment %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
 {% block content %} 
-    {% if department_list %}
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
-
+                  <p>
                    <a href="{% url 'department-add' %}">
                     <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
                         <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Dept.
                     </button>
                    </a>
+                  </p>
 
-                    <table class="table table-hover">
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
                         <thead>
                           <tr>
                               <th>#</th>
                               <th>Department Name</th>
                               <th>Manager</th>
                               <th>Location</th>
+                              <th>No. Staff</th>
                               <th>Created on</th>
                               <th>Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {% for dept in department_list %}
-                           <tr>
-                              <td>{{ forloop.counter }}</td>
-                              <td>{{ dept.department_name }}</td>
-                              <td>{{ dept.manager|default:'-' }}</td>
-                              <td>{{ dept.location }}</td>
-                              <td>{{ dept.created_at|date:'d M, Y'}}</td>
-                              <td>
-
-                                    <a href="{% url 'department-update' dept.pk %}" title="Edit department"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
-                                    <a href="{% url 'department-delete' dept.pk %}" title="Delete department"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>
-                                  
-                            </td>
-
-                            </tr>
-                          {% endfor %}
-                        </tbody>
                       </table>
                 </div>
             </div>
         </div>
     </div>
-    {% else %}
-        <div class="alert alert-info" role="alert">
-            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no department records in the system.  <a href="{% url 'department-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
-        </div>
-    {% endif %} 
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+
+        $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'department-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + 1; // Serial number, starts from 1
+                    }
+                },
+                {"data":"department_name"},
+                { "data": "manager" },
+                { "data": "location" },
+                {"data": "employee_count"},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'department-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'employee-delete' 0 %}`.replace('0', id)
+
+                    return `
+                           <a href="${updateURL}" title="Edit department"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                           <a href="${deleteURL}" title="Delete department"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+    });
+</script>
 {% endblock %}

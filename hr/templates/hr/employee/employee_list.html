@@ -1,68 +1,102 @@
-{% extends 'core/base.html' %} 
-{% load static %} 
+<!-- employee_list.html -->
+{% extends 'core/base.html' %}
+{% load static %}
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
 
-{% block content %} 
-    {% if employee_list %}
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
+{% endblock %}
 
-                   <a href="{% url 'employee-add' %}">
+{% block scripts %}
+{% comment %} <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script> {% endcomment %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+               
+            <p>
+                <a href="{% url 'employee-add' %}">
                     <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
                         <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Staff
                     </button>
-                   </a>
+                </a>
+            </p>
 
-                    <table class="table table-hover">
-                        <thead>
-                          <tr>
-                              <th>#</th>
-                              <th>Photo</th>
-                              <th>Name</th>
-                              <th>Staff ID</th>
-                              <th>Age</th>
-                              <th>Phone</th>
-                              <th>Department</th>
-                              <th>Hire Date</th>
-                              <th>Grade </th>
-                              <th>Created on</th>
-                              <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                        {% for employee in employee_list %}
-                           <tr>
-                              <td>{{ forloop.counter }}</td>
-                              <td style="width: 36px">
-                                <img src="{{ employee.photo.url }}" alt="contact-img" title="contact-img" class="rounded-circle avatar-sm">
-                              </td>
-                              <td>{{ employee }}</td>
-                              <td>{{ employee.employee_id }} </td>
-                              <td>{{ employee.get_age }}</td>
-                              <td>{{ employee.format_phone_number }}</td>
-                              <td>{{ employee.department }}</td>
-                              <td>{{ employee.hire_date|date:'d M, Y'}}</td>
-                              <td>{{ employee.salary_grade.grade }}</td>
-                              <td>{{ employee.created_at|date:'d M, Y'}}</td>
-                              <td>
-                                    <a href="{% url 'employee-update' employee.pk %}" title="Edit employee "><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
-                                    <a href="{% url 'employee-photo-upload' employee.pk %}" title="Upload employee photo "><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fe-camera"></i></button></a>
-
-                                    <a href="{% url 'employee-delete' employee.pk %}" title="Delete employee profile"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
-                            </td>
-
-                            </tr>
-                          {% endfor %}
-                        </tbody>
-                      </table>
-                </div>
+                <!-- DataTable structure -->
+                <table id="employeeTable" class="table table-hover dt-responsive nowrap w-100">
+                    <thead>
+                      <tr>
+                          <th>#</th>
+                          <th>Name</th>
+                          <th>Staff ID</th>
+                          <th>Status</th>
+                          <th>Age</th>
+                          <th>Phone</th>
+                          <th>Job</th>
+                          <th>Hire Date</th>
+                          <th>Grade</th>
+                          <th>Created on</th>
+                          <th>Actions</th>
+                      </tr>
+                    </thead>
+                </table>
             </div>
         </div>
     </div>
-    {% else %}
-        <div class="alert alert-info" role="alert">
-            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no employee records in the system.  <a href="{% url 'employee-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
-        </div>
-    {% endif %} 
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+
+        $('#employeeTable').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'employee-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + 1; // Serial number, starts from 1
+                    }
+                },
+                {"data":"first_name", "orderable":false},
+                { "data": "employee_id" },
+                {"data": "status"},
+                { "data": "dob", 'type':'num' }, 
+                { "data": "phone_number" },
+                { "data": "job" },
+                { "data": "hire_date" },
+                { "data": "salary_grade" },
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'employee-update' 0 %}`.replace('0', id)
+                 const documentUploadURL = `{% url 'employee-file-upload' 0 %}`.replace('0', id)
+                 const photoUploadURL = `{% url 'employee-photo-upload' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'employee-delete' 0 %}`.replace('0', id)
+
+                    return `<a href="${updateURL}" title="Edit employee "><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                            <a href="${documentUploadURL}" title="Upload employee document"><button class="btn btn-xs btn-outline-primary rounded-pill waves-effect waves-light"><i class="fe-file-plus"></i></button></a>
+                            <a href="${photoUploadURL}" title="Upload employee photo "><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fe-camera"></i></button></a>
+                            <a href="${deleteURL}" title="Delete employee profile"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[9, "desc"]]  // Default sorting by "created_at"
+        });
+
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'core/base.html' %}
+{% block content %}
+
+<!-- Existing Documents -->
+ <div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-bobdy">
+                <!-- Document Upload Form -->
+                <div class="m-1">
+                    <h4 class="text-info">Upload New Document</h4>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <p class="mt-2">
+                            <a href="{% url 'employee-list' %}">
+                                <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                            </a>
+                            <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                        </p>     
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="text-info">Uploaded Documents</h4>
+                <ul>
+                    {% for document in documents %}
+                        <li>{{ document.document_type.name }}: <a href="{{ document.document_file.url }}">Download <i class="fas fa-cloud-download-alt"></i></a></li>
+                    {% empty %}
+                        <li>No documents uploaded yet.</li>
+                    {% endfor %}
+                </ul>
+          </div>
+        </div>
+    </div>
+ </div>
+
+
+<hr>
+
+
+
+{% endblock %}

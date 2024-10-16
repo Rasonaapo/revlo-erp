@@ -6,22 +6,23 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required, permission_required
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.views.generic.edit import FormMixin
+
 from hr.models.employee import *
 from django.urls import reverse_lazy
 from django import forms
-from ..forms.employee_forms import JobHistoryForm, EmployeeForm
+from ..forms.employee_forms import JobHistoryForm, EmployeeForm, GuarantorForm, DocumentUploadForm
+from django.forms import modelformset_factory
+import pdb
+from django.db.models import Count
+
 
 # Create your views here.
 class DepartmentListView(LoginRequiredMixin, ListView):
     model = Department
     template_name = 'hr/employee/department_list.html'
     context_object_name = 'department_list'
-
-    def get_queryset(self):
-       queryset = super().get_queryset()
-       queryset = queryset.order_by('created_at')
-       return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -88,6 +89,9 @@ class JobListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
        queryset = super().get_queryset()
        queryset = queryset.order_by('created_at')
+       queryset = queryset.annotate(
+           employee_count=Count('employees')
+       )
        return queryset
 
     def get_context_data(self, **kwargs):
@@ -98,7 +102,7 @@ class JobListView(LoginRequiredMixin, ListView):
 class JobCreateView(LoginRequiredMixin, CreateView):
     model = Job
     template_name = 'hr/employee/job_form.html'
-    fields = ['job_title', 'min_salary', 'max_salary', 'currency']  
+    fields = ['job_title', 'department', 'min_salary', 'max_salary', 'currency']  
     success_url = reverse_lazy('job-list')
 
     def get_context_data(self, **kwargs):
@@ -113,7 +117,7 @@ class JobCreateView(LoginRequiredMixin, CreateView):
 class JobUpdateView(LoginRequiredMixin, UpdateView):
     model = Job
     template_name = 'hr/employee/job_form.html'
-    fields = ['job_title', 'min_salary', 'max_salary', 'currency']
+    fields = ['job_title', 'department', 'min_salary', 'max_salary', 'currency']
     success_url = reverse_lazy('job-list')
 
     def get_context_data(self, **kwargs):
@@ -199,16 +203,16 @@ class EmployeeListView(LoginRequiredMixin, ListView):
     template_name = 'hr/employee/employee_list.html'
     context_object_name =  'employee_list'
 
-    def get_queryset(self):
-       queryset = super().get_queryset()
-       queryset = queryset.order_by('created_at')
-       return queryset
+    # def get_queryset(self):
+    #    queryset = super().get_queryset()
+    #    queryset = queryset.order_by('created_at')
+    #    return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Employees'
         return context  
-
+ 
 class EmployeeCreateView(LoginRequiredMixin, CreateView):
     model = Employee
     form_class = EmployeeForm
@@ -218,16 +222,43 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Add Employee'
+        if self.request.POST:
+            context['guarantor_form'] = GuarantorForm(self.request.POST)
+        else:
+            context['guarantor_form'] = GuarantorForm()
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, f"Employee [{form.instance.first_name} {form.instance.last_name}] was created successfully")
-        return super().form_valid(form)
+        context = self.get_context_data()
+        guarantor_form = context['guarantor_form']
+
+        if form.is_valid() and guarantor_form.is_valid():
+            employee = form.save()
+
+            # save the guarantor with a reference to the employe
+            guarantor = guarantor_form.save(commit=False)
+            guarantor.employee = employee
+            guarantor.save()
+           
+            # create job history for the new employee
+            JobHistory.objects.create(
+                employee=employee,
+                job=employee.job,
+                start_date=employee.hire_date
+            )
+            
+            messages.success(self.request, f"Employee [{form.instance.first_name} {form.instance.last_name}] was created successfully")
+            return super().form_valid(form)
+        else:
+            return self.form_invalid(form)
     
     def form_invalid(self, form):
-        # Add an error message to be displayed when the form is invalid
+        context = self.get_context_data(form=form)
         messages.error(self.request, 'There was an error in the form. Please correct it and try again.')
-        return self.render_to_response(self.get_context_data(form=form))
+        
+        # we include the GuarantorFormSet in the context when the form is invalid
+        context['guarantor_form'] = GuarantorForm(self.request.POST)
+        return self.render_to_response(context)
 
 class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
     model = Employee
@@ -239,12 +270,42 @@ class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context =  super().get_context_data(**kwargs)
         context['title'] = 'Update Employee'
+
+        if self.request.POST:
+            context['guarantor_form'] = GuarantorForm(self.request.POST, instance=self.get_first_guarantor())
+        else:
+            context['guarantor_form'] = GuarantorForm(instance=self.get_first_guarantor())
         return context
     
-    def form_valid(self, form):
-        messages.success(self.request, f"{form.instance.first_name} {form.instance.last_name} was updated successfully")
-        return super().form_valid(form)
+    def get_first_guarantor(self):
+        """ Helper method to get the first guarantor for this employee"""
+        try:
+            return self.object.guarantors.first()
+        except Guarantor.DoesNotExist:
+            return None
     
+    def form_valid(self, form):
+        context = self.get_context_data()
+        guarantor_form = context['guarantor_form']
+
+        if form.is_valid() and guarantor_form.is_valid():
+            employee = form.save()
+
+            guarantor = guarantor_form.save(commit=False)
+            guarantor.employee = employee
+            guarantor.save()
+
+            messages.success(self.request, f"{form.instance.first_name} {form.instance.last_name} was updated successfully")
+            return super().form_valid(form)
+        else:
+            return self.form_invalid(form)
+    
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form)
+        messages.error(self.request, 'There was an error in the form. Please correct it and try again.')
+        
+        return self.render_to_response(context)
+
 def delete_employee(request, pk):
     employee = Employee.objects.get(id=pk)
 
@@ -276,3 +337,59 @@ class EmployeePhotoUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, f"{self.object} photo was uploaded successfully")
         return super().form_valid(form)
+
+class EmployeeDocumentView(LoginRequiredMixin, FormMixin, DetailView):
+    model = Employee
+    template_name = 'hr/employee/employee_documents.html'
+    context_object_name = 'employee'
+    form_class = DocumentUploadForm
+
+    def get_success_url(self):
+        return reverse_lazy('employee-file-upload', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        context['documents'] = Document.objects.filter(employee=self.get_object())
+        context['title'] = f"Documents for {self.get_object()}"
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handles document upload"""
+        self.object = self.get_object()
+        form = self.get_form()
+        # print(f"Document employee {employee}")
+
+        if form.is_valid():
+            document = form.save(commit=False)
+            document.employee = self.object
+           # print(f'debug form.is_valid() {employee}')
+            if not document.document_type.allow_multiple:
+                existing_docs = Document.objects.filter(employee=self.object, document_type=document.document_type)
+                if existing_docs.exists():
+                    form.add_error('document_type', f"Employee already has a {document.document_type.name} document. Only one is allowed.")
+                    return self.form_invalid(form)
+            document.save()
+            messages.success(self.request, 'Document uploaded successfully.')
+            return redirect(self.get_success_url()) #self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        """Handles invalid form submission"""
+        context = self.get_context_data(form=form)
+        messages.error(self.request, "Error: Document could not be uploaded. Please fix the errors below.")
+        return self.render_to_response(context)
+    
+class EmployeeDetailView(LoginRequiredMixin, DetailView):
+    model = Employee
+    template_name = 'hr/employee/employee_detail.html'
+    context_object_name = 'employee'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'{self.get_object()} Profile'
+        context['guarantors'] = Guarantor.objects.filter(employee=self.get_object())
+        context['histories'] = JobHistory.objects.filter(employee=self.get_object()).order_by('created_at')
+        context['documents'] = Document.objects.filter(employee=self.get_object())
+        return context
+    

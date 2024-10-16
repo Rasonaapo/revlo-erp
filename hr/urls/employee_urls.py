@@ -1,13 +1,15 @@
 from django.urls import path
 from hr.views.employee_views import  *
+from hr.views.employee_json import *
 
+## Department
 urlpatterns = [
     # path('', employee_views.index, name='home'),
     path('departments/', DepartmentListView.as_view(), name="department-list"),
     path('departments/add/', DepartmentCreateView.as_view(), name="department-add"),
     path('departments/<int:pk>/update/', DepartmentUpdateView.as_view(), name="department-update"),
     path('departments/<int:pk>/delete/', delete_department, name="department-delete"),
-
+    path('departments/api/', DepartmentListApiView.as_view(), name="department-list-api"),
 ]
 
 ## Job
@@ -29,8 +31,12 @@ urlpatterns += [
 ## Employee
 urlpatterns += [
     path('employees/', EmployeeListView.as_view(), name='employee-list'),
+    path('employees/api/', EmployeeListApiView.as_view(), name='employee-list-api'),  # API for DataTables
+    path('employees/<int:pk>/detail/', EmployeeDetailView.as_view(), name='employee-detail'),
     path('employees/add/', EmployeeCreateView.as_view(), name='employee-add'),
     path('employees/<int:pk>/update/', EmployeeUpdateView.as_view(), name="employee-update"),
     path('employees/<int:pk>/delete/', delete_employee, name="employee-delete"),
     path('employees/<int:pk>/photo-upload/', EmployeePhotoUpdateView.as_view(), name='employee-photo-upload'),
-]
+    path('employees/<int:pk>/documents/', EmployeeDocumentView.as_view(), name='employee-file-upload'),
+
+]   
