@@ -1,0 +1,106 @@
+<!-- employee_list.html -->
+{% extends 'core/base.html' %}
+{% load static %}
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                  <p>
+                   <a href="{% url 'leave-type-add' %}">
+                    <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Leave Type
+                    </button>
+                   </a>
+                  </p>
+
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Leave Description</th>
+                              <th>Entitlement (Days) </th>
+                              <th>Method</th>
+                              <th>Allow Rollover</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+
+        $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            language: {
+                paginate: {
+                    previous: "<i class='mdi mdi-chevron-left'>",
+                    next: "<i class='mdi mdi-chevron-right'>"
+                }
+            },
+            "ajax": {
+                "url": "{% url 'leave-type-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + 1; // Serial number, starts from 1
+                    }
+                },
+                {"data":"name"},
+                { "data": "entitlement", render: function(data, type, row){
+                    return `<span class='badge bg-info'>${data}</span>`
+                } },
+                { "data": "method" },
+                {"data":"allow_rollover", "render":function(data, type, row){
+                    const allowRollOver = data
+                    if(!allowRollOver){
+                    return '<i class="fas fa-times-circle text-danger"></i>'
+                    }else{
+                        return '<i class="fas fa-check-circle text-success"></i>'                               
+                    }
+        
+                }},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'leave-type-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'leave-type-delete' 0 %}`.replace('0', id)
+
+                    return `
+                           <a href="${updateURL}" title="Edit leave type"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                           <a href="${deleteURL}" title="Delete leave type"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+
+        });
+
+    });
+</script>
+{% endblock %}

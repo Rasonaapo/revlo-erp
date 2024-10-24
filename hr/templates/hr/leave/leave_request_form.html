@@ -1,0 +1,66 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+<div class="row">
+    <div class="col-lg-3"></div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label>Employee</label>
+                        <span class="form-text text-muted">{{ employee }}</span>
+                    </div>
+                
+                    <div class="mb-3">
+                        <label>Leave Type</label>
+                        <span class="form-text text-muted">{{ leave_type.name }}</span>
+                    </div>
+                
+                    <div class="mb-3">
+                        <label for="id_requested_days">Remaining Days</label>
+                        <span class="form-text text-muted">
+                           {{ remaining_days }} days
+                        </span>
+                    </div>
+                
+                    <div class="mb-3">
+                        {{ form.days_requested|as_crispy_field }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.start_date|as_crispy_field }}
+                    </div>
+                
+                    <div class="mb-3">
+                        {{ form.status|as_crispy_field }}
+                    </div>
+                
+                    <p class="mt-2">
+                        <a href="{% url 'leave-balance-list' %}">
+                            <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                        </a>
+                        <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                    </p>                  
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $('document').ready(function(){
+
+        $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+
+    });
+</script> 
+{% endblock %}

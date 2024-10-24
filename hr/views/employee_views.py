@@ -16,6 +16,7 @@ from ..forms.employee_forms import JobHistoryForm, EmployeeForm, GuarantorForm, 
 from django.forms import modelformset_factory
 import pdb
 from django.db.models import Count
+from django.db import transaction
 
 
 # Create your views here.
@@ -203,14 +204,18 @@ class EmployeeListView(LoginRequiredMixin, ListView):
     template_name = 'hr/employee/employee_list.html'
     context_object_name =  'employee_list'
 
-    # def get_queryset(self):
-    #    queryset = super().get_queryset()
-    #    queryset = queryset.order_by('created_at')
-    #    return queryset
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Employees'
+        context.update({
+            'title':'Employees',
+            'id_list': NationalIDType.objects.all(),
+            'job_list':Job.objects.all(),
+            'department_list':Department.objects.all(),
+            'salary_grade_list':SalaryGrade.objects.all(),
+            'bank_list':Bank.objects.all(),
+            'status_list':Employee.Status.choices
+        })
+        
         return context  
  
 class EmployeeCreateView(LoginRequiredMixin, CreateView):
@@ -227,28 +232,40 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
         else:
             context['guarantor_form'] = GuarantorForm()
         return context
+    # create leave balances for this employ
+    def create_leave_balances(self, employee):
+        leave_types = LeaveType.objects.all()
+        for leave_type in leave_types:
+            LeaveBalance.objects.create(
+                employee=employee,
+                leave_type=leave_type,
+                used_days=0.0,
+                accrued_days=0.0 if leave_type.method == 'accrual' else leave_type.entitlement
+            )
 
     def form_valid(self, form):
         context = self.get_context_data()
         guarantor_form = context['guarantor_form']
 
         if form.is_valid() and guarantor_form.is_valid():
-            employee = form.save()
+            with transaction.atomic():
+                employee = form.save()
 
-            # save the guarantor with a reference to the employe
-            guarantor = guarantor_form.save(commit=False)
-            guarantor.employee = employee
-            guarantor.save()
-           
-            # create job history for the new employee
-            JobHistory.objects.create(
-                employee=employee,
-                job=employee.job,
-                start_date=employee.hire_date
-            )
+                # save the guarantor with a reference to the employe
+                guarantor = guarantor_form.save(commit=False)
+                guarantor.employee = employee
+                guarantor.save()
             
-            messages.success(self.request, f"Employee [{form.instance.first_name} {form.instance.last_name}] was created successfully")
-            return super().form_valid(form)
+                # create job history for the new employee
+                JobHistory.objects.create(
+                    employee=employee,
+                    job=employee.job,
+                    start_date=employee.hire_date
+                )
+                self.create_leave_balances(employee)
+
+                messages.success(self.request, f"Employee [{form.instance.first_name} {form.instance.last_name}] was created successfully")
+                return super().form_valid(form)
         else:
             return self.form_invalid(form)
     
@@ -392,4 +409,4 @@ class EmployeeDetailView(LoginRequiredMixin, DetailView):
         context['histories'] = JobHistory.objects.filter(employee=self.get_object()).order_by('created_at')
         context['documents'] = Document.objects.filter(employee=self.get_object())
         return context
-    
+

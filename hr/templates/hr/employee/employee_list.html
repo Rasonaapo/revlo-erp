@@ -3,12 +3,16 @@
 {% load static %}
 {% block styles %}
 <link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
 
 {% endblock %}
 
 {% block scripts %}
 {% comment %} <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script> {% endcomment %}
 <script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+
 {% endblock %}
 
 {% block content %}
@@ -24,6 +28,71 @@
                         <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Staff
                     </button>
                 </a>
+            </p>
+
+            <p>
+               <div class="row">
+                <div class="col-md-2">
+                    <label for="filterGrade" class="text-info">Filter by Grade</label>
+                    <select id="filterGrade" class="form-control select2" data-toggle="select2" data-width="100%">
+                     <option value="">All Grades</option>
+                     {% for salary_grade in salary_grade_list %}
+                        <option value="{{ salary_grade.id }}"> {{salary_grade.grade}} </option>
+                     {% endfor %}
+                    </select>    
+                </div>
+
+                <div class="col-md-2">
+                    <label for="filterJob" class="text-info">Filter by Job</label>
+                    <select id="filterJob" class="form-control select2" data-toggle="select2" data-width="100%">
+                        <option value="">All Jobs</option>
+                        {% for job in job_list %}
+                        <option value="{{ job.id }}"> {{job.job_title}} </option>
+                        {% endfor %}
+                    </select>    
+                </div>
+
+                
+                <div class="col-md-2">
+                        <label for="filterDepartment" class="text-info">Filter by Department</label>
+                        <select id="filterDepartment" class="form-control select2" data-toggle="select2" data-width="100%">
+                            <option value="">All Departments</option>
+                            {% for dept in department_list %}
+                            <option value="{{ dept.id }}"> {{dept.department_name}} </option>
+                            {% endfor %}
+                        </select>    
+                </div>
+
+                <div class="col-md-2">
+                    <label for="filterID" class="text-info">Filter by National ID Type</label>
+                    <select id="filterID" class="form-control select2" data-toggle="select2" data-width="100%">
+                        <option value="">All ID Types</option>
+                        {% for id in id_list %}
+                        <option value="{{ id.id }}"> {{id.name}} </option>
+                        {% endfor %}
+                    </select>    
+                </div>
+
+                <div class="col-md-2">
+                    <label for="filterBank" class="text-info">Filter by Bank</label>
+                    <select id="filterBank" class="form-control select2" data-toggle="select2" data-width="100%">
+                        <option value="">All Banks</option>
+                        {% for bank in bank_list %}
+                        <option value="{{ id.id }}"> {{id.name}} </option>
+                        {% endfor %}
+                    </select>    
+                </div>
+
+                <div class="col-md-2">
+                    <label for="filterStatus" class="text-info">Filter by Status</label>
+                    <select id="filterStatus" class="form-control select2" data-toggle="select2" data-width="100%">
+                        <option value="">All Statuses </option>
+                        {% for status_value, status_label in status_list %}
+                        <option value="{{ status_value }}"> {{status_label}} </option>
+                        {% endfor %}
+                    </select>    
+                </div>
+             </div> 
             </p>
 
                 <!-- DataTable structure -->
@@ -54,12 +123,22 @@
 <script>
     $(document).ready(function() {
 
-        $('#employeeTable').DataTable({
+        $('[data-toggle="select2"]').select2()
+
+       var table =  $('#employeeTable').DataTable({
             "processing": true,
             "serverSide": true,
             "ajax": {
                 "url": "{% url 'employee-list-api' %}",
-                "type": "GET"
+                "type": "GET",
+                "data":function(d){
+                    d.status=$('#filterStatus').val(),
+                    d.bank=$('#filterBank').val(),
+                    d.job=$('#filterJob').val(),
+                    d.department=$('#filterDepartment').val(),
+                    d.id=$('#filterID').val(),
+                    d.grade=$('#filterGrade').val()
+                }
             },
             "columns": [
                 { 
@@ -96,6 +175,11 @@
             ],
             "order": [[9, "desc"]]  // Default sorting by "created_at"
         });
+
+        $('#filterStatus, #filterBank, #filterDepartment, #filterGrade, #filterID, #filterJob').on('change', function(){
+            table.ajax.reload()
+
+        })
 
     });
 </script>

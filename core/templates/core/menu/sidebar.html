@@ -96,6 +96,7 @@
           <span class="menu-text"> HR </span>
           <span class="menu-arrow"></span>
         </a>
+        
         <div class="collapse" id="menuMultilevel">
           <ul class="sub-menu">
             <li class="menu-item">
@@ -153,34 +154,45 @@
                       <span class="menu-text">Grades</span>
                     </a>               
                   </li>
-
-                  {% comment %} <li class="menu-item">
-                    <a
-                      href="ecommerce-dashboard.html#menuMultilevel4"
-                      data-bs-toggle="collapse"
-                      class="menu-link"
-                    >
-                      <span class="menu-text">Item 2</span>
-                      <span class="menu-arrow"></span>
-                    </a>
-                    <div class="collapse" id="menuMultilevel4">
-                      <ul class="sub-menu">
-                        <li class="menu-item">
-                          <a href="javascript: void(0);" class="menu-link">
-                            <span class="menu-text">Item 1</span>
-                          </a>
-                        </li>
-                        <li class="menu-item">
-                          <a href="javascript: void(0);" class="menu-link">
-                            <span class="menu-text">Item 2</span>
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-                  </li> {% endcomment %}
                 </ul>
               </div>
             </li>
+
+            <li class="menu-item">
+              <a
+                href="ecommerce-dashboard.html#menuMultilevel4"
+                data-bs-toggle="collapse"
+                class="menu-link"
+              >
+                <span class="menu-text">Leave</span>
+                <span class="menu-arrow"></span>
+              </a>
+              <div class="collapse" id="menuMultilevel4">
+                <ul class="sub-menu">
+                  <li class="menu-item">
+                    <a href="{% url 'leave-type-list' %}" class="menu-link">
+                      <span class="menu-text">Leave Types</span>
+                    </a>               
+                  </li>
+                  <li class="menu-item">
+                    <a href="{% url 'leave-balance-list' %}" class="menu-link">
+                      <span class="menu-text">Leave Balances</span>
+                    </a>               
+                  </li>
+                  <li class="menu-item">
+                    <a href="{% url 'leave-request-list' %}" class="menu-link">
+                      <span class="menu-text">Leave Requests</span>
+                    </a>               
+                  </li>
+                  <li class="menu-item">
+                    <a href="{% url 'holiday-list' %}" class="menu-link">
+                      <span class="menu-text">Public Holidays</span>
+                    </a>               
+                  </li>
+                </ul>
+              </div>
+            </li>
+
           </ul>
         </div>
       </li>

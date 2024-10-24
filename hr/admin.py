@@ -57,3 +57,20 @@ class GuarantorAdmin(admin.ModelAdmin):
 class TaxAdmin(admin.ModelAdmin):
     list_display = ('year', 'block', 'rate', )
 
+# Leave
+@admin.register(LeaveType)
+class LeaveTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'entitlement', 'method', 'allow_rollover' )
+
+@admin.register(LeaveBalance)
+class LeaveBalanceAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'leave_type', 'accrued_days', 'used_days', )
+
+@admin.register(LeaveRequest)
+class LeaveRequestAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'leave_type', 'start_date', 'end_date', 'status', 'days_requested', )
+
+@admin.register(PublicHoliday)
+class PublicHolidayAdmin(admin.ModelAdmin):
+    list_display = ('name', 'date')
+    list_filter = ['date']

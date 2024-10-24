@@ -223,16 +223,83 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"Attendance of {self.employee} for {self.meeting}"
+
+class LeaveType(models.Model):
+    LEAVE_METHOD_CHOICES = [
+        ('accrual', 'Accrual Method'),
+        ('fixed', 'Static Annual Allotment'),
+    ]
     
+    name = models.CharField(max_length=50)
+    entitlement = models.FloatField()  # Entitlement in days (used for both methods)
+    method = models.CharField(max_length=10, choices=LEAVE_METHOD_CHOICES, default='accrual')  # Which method is used for this leave type
+    allow_rollover = models.BooleanField(default=False, verbose_name="Allow Rollover")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class LeaveBalance(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='leave_balances')
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    accrued_days = models.FloatField(default=0.0)  # For accrual method
+    used_days = models.FloatField(default=0.0)     # For both methods
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def remaining_days(self):
+        # if self.leave_type.method == 'accrual':
+        # Always return accrued days minus used days, regardless of method
+        return self.accrued_days - self.used_days
+        # else:
+        #     # For static allotment, use entitlement directly
+        #     return self.leave_type.entitlement - self.used_days
+
+    def accrue_leave(self, months_worked):
+        if self.leave_type.method == 'accrual':
+            # Accrual method: leave increases month by month
+            annual_entitlement = self.leave_type.entitlement
+            self.accrued_days += (annual_entitlement / 12) * months_worked
+        # For static allotment, leave balance is already pre-set at the start of the year.
+        self.save()
+
+    def __str__(self):
+        return f"{self.employee} - {self.leave_type.name} leave balance"
+    
+class LeaveRequest(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=20, choices=[('Pending', 'Pending'), ('Approved', 'Approved'), ('Rejected', 'Rejected'), ('Expired', 'Expired')], default='Pending')
+    days_requested = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        leave_balance = LeaveBalance.objects.get(employee=self.employee, leave_type=self.leave_type)
+        
+        if self.status == 'Approved':
+            if leave_balance.remaining_days() >= self.days_requested:
+                leave_balance.used_days += self.days_requested
+                leave_balance.save()
+                super().save(*args, **kwargs)
+            else:
+                raise ValidationError(f"Insufficient leave balance for {self.leave_type.name}. Available balance: {leave_balance.remaining_days()} days.")
+        else:
+            super().save(*args, **kwargs)
 
 
+class PublicHoliday(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # Name of the holiday (e.g., Christmas, New Year)
+    date = models.DateField()  # The date of the holiday
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-# class Salary(models.Model):
-#     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='salary_records')
-#     amount = models.DecimalField(max_digits=10, decimal_places=2)
-#     payment_date = models.DateField()
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        unique_together = ('name', 'date')  # Ensure a holiday with the same name and date cannot be duplicated
 
-#     def __str__(self):
-#         return f"{self.employee} - {self.amount} on {self.payment_date}"
+    def __str__(self):
+        return f"{self.name} ({self.date.strftime('%d %b, %Y')})"

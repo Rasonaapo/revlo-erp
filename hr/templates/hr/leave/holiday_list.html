@@ -1,0 +1,52 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %} 
+    {% if holiday_list %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+
+                   <a href="{% url 'holiday-add' %}">
+                    <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Holiday
+                    </button>
+                   </a>
+
+                    <table class="table table-hover">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Name</th>
+                              <th>Date</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for holiday in holiday_list %}
+                           <tr>
+                              <td>{{ forloop.counter }}</td>
+                              <td>{{ holiday.name }}</td>
+                              <td>{{ holiday.date|date:'d M, Y' }} </td>
+                              <td>{{ holiday.created_at|date:'d M, Y'}}</td>
+                              <td>
+                                    <a href="{% url 'holiday-update' holiday.pk %}" title="Edit public holiday"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                                    <a href="{% url 'holiday-delete' holiday.pk %}" title="Delete public holiday"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
+                            </td>
+
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no public holiday records in the system.  <a href="{% url 'holiday-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
+        </div>
+    {% endif %} 
+{% endblock %}

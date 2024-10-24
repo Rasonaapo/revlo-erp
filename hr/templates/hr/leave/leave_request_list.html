@@ -1,0 +1,169 @@
+<!-- employee_list.html -->
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+{% endblock %}
+
+
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                  <p>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="employeeFilter" class="text-info">Filter by Employee</label>
+                            <select id="employeeFilter" class="form-control select2" data-toggle="select2" data-width="100%">
+                                <option value="">All Employees</option>
+                                {% for employee in employee_list %}
+                                    <option value="{{ employee.id }}">{{ employee }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="leaveTypeFilter" class="text-info">Filter by Leave Type</label>
+                            <select id="leaveTypeFilter" class="form-control select2" data-toggle="select2" data-width="100%">
+                                <option value="">All Leave Types</option>
+                                {% for leave_type in leave_type_list %}
+                                    <option value="{{ leave_type.id }}">{{ leave_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="statusFilter" class="text-info">Filter by Status</label>
+                            <select id="statusFilter" class="form-control select2" data-toggle="select2" data-width="100%">
+                                <option value="">All Leave Status</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Rejected">Rejected</option>
+                                    <option value="Approved">Approved</option>
+
+                            </select>
+                        </div>
+                    </div>
+                  </p>
+
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Employee</th>
+                              <th>Leave Type </th>
+                              <th>Days Requested</th>
+                              <th>Start Date</th>
+                              <th>End Date</th>
+                              <th>Status</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+
+    $('[data-toggle="select2"]').select2()
+    
+       var table = $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            language: {
+                paginate: {
+                    previous: "<i class='mdi mdi-chevron-left'>",
+                    next: "<i class='mdi mdi-chevron-right'>"
+                }
+            },
+            "ajax": {
+                "url": "{% url 'leave-request-list-api' %}",
+                "type": "GET",
+                "data":function(d){
+                    d.employee = $('#employeeFilter').val(),
+                    d.leave_type = $('#leaveTypeFilter').val(),
+                    d.status = $('#statusFilter').val()
+                }
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+
+                        return meta.row + 1; // Serial number, starts from 1
+                    }
+                },
+                {"data":"employee"},
+                { "data": "leave_type"},
+                { "data": "days_requested" },
+                {"data":"start_date"},
+                {"data":"end_date"},
+                {"data":"status", "render":function(data, type, row){
+                    var {status, remaining_days:remainingDays, days_until_start:daysUntilStart} = data
+                    //console.log(remainingDays)
+                    
+                    if(status == 'Approved'){
+                        if (daysUntilStart != null){
+                            return `<span class='badge bg-warning'>${daysUntilStart} days more</span>`
+                        }else{
+                            return `<span class='badge bg-primary'>In Progress: ${remainingDays} days remaining</span>`
+                        }
+                    }else if(status == 'Pending'){
+                            return `<span class='badge bg-info'>${status}</span>`
+                    }else if(status == 'Rejected'){
+                            return `<span class='badge bg-danger'>${status}</span>`
+                    }else{
+                            return `<span class='badge bg-success'>${status}</span>`
+                    }
+                }},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+                 const update = row.updated_at
+                 const updateURL = `{% url 'leave-request-update' 0 %}`.replace('0', id)
+                    
+                 let status = row.status.status
+                 console.log(status)
+                 switch(status){
+                    case 'Pending':
+                    case 'Rejected':
+                        return `<a href="${updateURL}" title="Edit leave request"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>`
+                    break;
+
+                    case 'Approved':
+                    case 'Expired':
+                       return `<button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="far fa-bell-slash"></i></button>`
+                    break;
+
+                 }
+
+                }},
+            ],
+            "order": [[7, "desc"]]  // Default sorting by "created_at"
+
+        });
+
+        $('#employeeFilter, #leaveTypeFilter, #statusFilter').on('change', function(){
+            table.ajax.reload()
+        })
+
+    });
+</script>
+{% endblock %}

@@ -78,6 +78,32 @@ class EmployeeListApiView(LoginRequiredMixin, BaseDatatableView):
                 Q(salary_grade__grade__icontains=search)
 
             )
+        # process filters from the template
+        grade_id = self.request.GET.get('grade')
+        bank_id = self.request.GET.get('bank')
+        department_id = self.request.GET.get('department')
+        job_id = self.request.GET.get('job')
+        national_id = self.request.GET.get('id')
+        status = self.request.GET.get('status')
+
+        if grade_id:
+            qs = qs.filter(salary_grade_id=grade_id)
+        
+        if status:
+            qs = qs.filter(status=status)
+        
+        if bank_id:
+            qs = qs.filter(bank_id=bank_id)
+        
+        if job_id:
+            qs = qs.filter(job_id=job_id)
+        
+        if national_id:
+            qs = qs.filter(id_type_id=national_id)
+        
+        if department_id:
+            qs = qs.filter(job__department_id=department_id)
+        
         return qs
  
 # Department

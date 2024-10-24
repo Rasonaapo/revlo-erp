@@ -1,6 +1,6 @@
 from typing import Any
 from django import forms
-from ..models.employee import JobHistory, Employee, Guarantor, Document, DocumentType
+from ..models.employee import JobHistory, Employee, Guarantor, Document, DocumentType, LeaveRequest
 from datetime import date
 from django.core.exceptions import ValidationError
 import re
@@ -100,3 +100,39 @@ class DocumentUploadForm(forms.ModelForm):
         fields = ['document_type', 'document_file']
         exclude = ['employee']
 
+
+class LeaveRequestForm(forms.ModelForm):
+    class Meta:
+        model = LeaveRequest
+        fields = ['start_date', 'days_requested', 'status']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type':'date', 'class':'datepicker'})
+        }
+    def __init__(self, *args, **kwargs):
+        # Capture remaining_days from view context
+        self.remaining_days = kwargs.pop('remaining_days', None)
+        super(LeaveRequestForm, self).__init__(*args, **kwargs)
+
+        if self.instance.pk:
+            self.fields['status'].choices = [
+                ('Pending', 'Pending'),
+                ('Approved', 'Approved'),
+                ('Rejected', 'Rejected'),
+            ]
+        else:
+            self.fields['status'].choices = [
+                ('Pending', 'Pending'),
+                ('Approved', 'Approved')
+            ]
+
+    def clean_days_requested(self):
+        days_requested = self.cleaned_data.get('days_requested')
+        if days_requested > self.remaining_days:
+            raise forms.ValidationError(f"Requested days cannot exceed {self.remaining_days} remaining days.")
+        return days_requested
+
+    def clean_start_date(self):
+        start_date = self.cleaned_data.get('start_date')
+        if start_date < date.today():
+            raise forms.ValidationError("Start date cannot be in the past.")
+        return start_date

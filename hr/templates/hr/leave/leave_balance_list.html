@@ -1,0 +1,155 @@
+<!-- employee_list.html -->
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+
+<style>
+
+    
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+{% endblock %}
+
+
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                  <p>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="employeeFilter" class="text-info">Filter by Employee</label>
+                            <select id="employeeFilter" class="form-control select2" data-toggle="select2" data-width="100%">
+                                <option value="">All Employees</option>
+                                {% for employee in employee_list %}
+                                    <option value="{{ employee.id }}">{{ employee }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="leaveTypeFilter" class="text-info">Filter by Leave Type</label>
+                            <select id="leaveTypeFilter" class="form-control select2" data-toggle="select2" data-width="100%">
+                                <option value="">All Leave Types</option>
+                                {% for leave_type in leave_type_list %}
+                                    <option value="{{ leave_type.id }}">{{ leave_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                  </p>
+
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Employee</th>
+                              <th>Leave Type </th>
+                              <th>Accrued Days</th>
+                              <th>Used Days</th>
+                              <th>Remaining Days</th>
+                              <th>Last updated</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+
+    $('[data-toggle="select2"]').select2()
+    
+
+       var table = $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            language: {
+                paginate: {
+                    previous: "<i class='mdi mdi-chevron-left'>",
+                    next: "<i class='mdi mdi-chevron-right'>"
+                }
+            },
+            "ajax": {
+                "url": "{% url 'leave-balance-list-api' %}",
+                "type": "GET",
+                "data":function(d){
+                    d.employee = $('#employeeFilter').val(),
+                    d.leave_type = $('#leaveTypeFilter').val()
+                }
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + 1; // Serial number, starts from 1
+                    }
+                },
+                {"data":"employee", "render":function(data, type, row){
+                    const {name, photo, status } = data
+                    //<img src="{photo_url}"  alt="contact-img" title="contact-img" class="rounded-circle me-2 avatar-sm"> <a href="{url}" class="text-body fw-semibold">{row.first_name} {row.last_name}</a>
+                    return `<img src="${photo}"  alt="contact-img" title="contact-img" class="rounded-circle me-2 avatar-sm"> ${name}`
+                }},
+                {"data":"leave_type"},
+                {"data":"accrued_days"},
+                {"data":"used_days"},
+                {"data":"remaining_days", "render": function(data, type, row){
+                     remainingDays = parseFloat(data)
+                    if (remainingDays == parseFloat(row.accrued_days))
+                    return `<span class='badge bg-success'>${remainingDays}</span>`
+                    else if (remainingDays == 0)
+                     return `<span class='badge bg-danger'>${remainingDays}</span>`
+                    else
+                     return `<span class='badge bg-info'>${remainingDays}</span>`
+                }},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'leave-balance-update' 0 %}`.replace('0', id)
+                 console.log(remainingDays)
+                 let requestURL = ''
+                 if(remainingDays > 0 && row.employee.status == 'active'){
+                    const url = `{% url 'leave-request-add' 0 %}`.replace('0', id)
+                    requestURL = `<a href="${url}" title="request ${row.leave_type} for  ${row.employee}"><button class="btn btn-xs btn-outline-primary rounded-pill waves-effect waves-light"><i class="fas fa-user-plus"></i></button></a>`
+                 }
+                 if(row.employee.status == 'active'){
+                    return `
+                    <a href="${updateURL}" title="Edit leave balance"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                    ${requestURL}
+                    `
+                 }else{
+                    return `<button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="far fa-bell-slash"></i></button>`
+                }
+                           
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+
+        });
+
+        $('#employeeFilter, #leaveTypeFilter').on('change', function(){
+            table.ajax.reload()
+        })
+
+    });
+</script>
+{% endblock %}

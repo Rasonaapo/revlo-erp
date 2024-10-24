@@ -1,0 +1,6 @@
+.select2-container .select2-selection--single {
+    height: 38px;  /* Match the height of other inputs */
+    padding: 6px 12px;
+    font-size: 1rem;
+    line-height: 1.5;
+}
