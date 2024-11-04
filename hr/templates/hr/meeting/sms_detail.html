@@ -1,0 +1,59 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-7 col-xl-7">
+        <div class="card">
+            <div class="card-body">
+                {% if sms.status == 'pending' %}
+                     <a href="{% url 'sms-update' sms.id %}" title="Edit meeting"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                {% endif %}
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> SMS Information</h5>
+
+                <p class="text-muted mb-2 font-13"><strong>Message :</strong> <span class="ms-2">{{ sms.message|linebreaksbr }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>SMS Date :</strong> <span class="ms-2">{{ sms.sms_date|date:'d M, Y h:i A' }} </span></p>       
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Employee Filters (Dept/Job/Grade)</h5>
+            
+                <p class="text-muted mb-2 font-13"><strong>Job :</strong> <span class="ms-2">{{ meeting.display_meeting_job|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Department :</strong> <span class="ms-2">{{ meeting.display_meeting_department|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Grades :</strong> <span class="ms-2">{{ meeting.display_meeting_grade|default:'N/A' }} </span></p>
+
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-5 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+
+  
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> {{ sms.get_status_display }} SMS Affected Staff</h5>
+
+                <div class="inbox-widget" data-simplebar style="max-height: 407px;">
+                    {% for employee in employees %}
+                    <div class="inbox-item">
+                        <div class="inbox-item-img"><img src="{{ employee.photo.url }}" class="rounded-circle" alt=""></div>
+                        <p class="inbox-item-author">{{ employee.first_name }} {{ employee.last_name }}</p>
+                        <p class="inbox-item-text"></p>
+                        <p class="inbox-item-date">
+                            <a href="javascript:(0);" class="btn btn-sm btn-link text-info font-13"> </a>
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div> <!-- end inbox-widget -->
+
+            </div>
+
+        </div>       
+    </div>
+</div>
+
+{% endblock %}

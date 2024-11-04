@@ -193,6 +193,31 @@
               </div>
             </li>
 
+            <li class="menu-item">
+              <a
+                href="ecommerce-dashboard.html#menuMultilevel5"
+                data-bs-toggle="collapse"
+                class="menu-link"
+              >
+                <span class="menu-text">Meeting & SMS</span>
+                <span class="menu-arrow"></span>
+              </a>
+              <div class="collapse" id="menuMultilevel5">
+                <ul class="sub-menu">
+                  <li class="menu-item">
+                    <a href="{% url 'meeting-list' %}" class="menu-link">
+                      <span class="menu-text">Meetings</span>
+                    </a>               
+                  </li>
+                  <li class="menu-item">
+                    <a href="{% url 'sms-list' %}" class="menu-link">
+                      <span class="menu-text">SMS Schedules</span>
+                    </a>               
+                  </li>
+                </ul>
+              </div>
+            </li>
+
           </ul>
         </div>
       </li>

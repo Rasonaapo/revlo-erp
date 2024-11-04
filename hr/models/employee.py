@@ -66,6 +66,10 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+    skills = models.ManyToManyField('Skill', related_name='employees')
+
+    def display_employee_skill(self):
+        return ",".join(skill.name for skill in self.skills.all())
 
     def get_absolute_url(self):
         return reverse("employee-detail", args=[str(self.id)])
@@ -204,20 +208,97 @@ class Document(models.Model):
 
 class Meeting(models.Model):
     subject = models.CharField(max_length=200)
-    meeting_date = models.DateTimeField()
-    sms_date = models.DateTimeField()
-    location = models.CharField(max_length=100)
-    agenda = models.TextField()
+    meeting_date = models.DateTimeField(verbose_name="Meeting Date")
+    sms = models.TextField(null=True, help_text="Note: SMS will prepend staff ID and append meeting date & venue")
+    sms_date = models.DateTimeField(verbose_name="SMS Date & Time")
+    location = models.CharField(max_length=100, verbose_name="Venue")
+    agenda = models.TextField(null=True)
+    job = models.ManyToManyField('Job', related_name='meetings')
+    department = models.ManyToManyField('Department', related_name='meetings')
+    salary_grade = models.ManyToManyField('SalaryGrade', related_name='meetings', verbose_name="Salary Grade")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    MEETING_STATUS = (
+        ('pending', 'Pending'),
+        ('on_going', 'On Going'),
+        ('ended', 'Ended'),
+    )
+    status = models.CharField(choices=MEETING_STATUS, default='pending', max_length=10)
 
     def __str__(self):
-        return f"{self.subject} on {self.meeting_date}"
+        return f"{self.subject} on {self.meeting_date.strftime('%d %b, %Y %I:%M %p')}"
+    
+    def get_meeting_employees(self):
+        # Retrieve the selected criteria
+        selected_jobs = self.job.all()
+        selected_departments = self.department.all()
+        selected_grades = self.salary_grade.all()
 
+        # Filter employees based on the criteria selected
+        employees = Employee.objects.all()
+        filtered_employees = [
+            employee for employee in employees
+            if (not selected_jobs or employee.job in selected_jobs) and 
+               (not selected_departments or (employee.job and employee.job.department in selected_departments )) and 
+               (not selected_grades or employee.salary_grade in selected_grades)
+        ]
+        return filtered_employees
+    
+    def display_meeting_job(self):
+        return ",".join(job.job_title for job in self.job.all())
+
+    def display_meeting_department(self):
+        return ",".join(department.department_name for department in self.department.all())
+
+    def display_meeting_grade(self):
+        return ",".join(grade.grade for grade in self.salary_grade.all())
+
+class SMS(models.Model):
+    message = models.TextField(null=True, help_text="Note: SMS will prepend staff ID")
+    sms_date = models.DateTimeField(verbose_name="SMS Date & Time")
+    job = models.ManyToManyField('Job', related_name='sms')
+    department = models.ManyToManyField('Department', related_name='sms')
+    salary_grade = models.ManyToManyField('SalaryGrade', related_name='sms', verbose_name="Salary Grade")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    SMS_STATUS = (
+        ('pending', 'Pending'),
+        ('dispatched', 'Dispatched'),
+    )
+    status = models.CharField(choices=SMS_STATUS, default='pending', max_length=10)
+
+    def __str__(self):
+        return f"{self.message[:20]} on {self.sms_date.strftime('%d %b, %Y %I:%M %p')}"
+    
+    def get_sms_employees(self):
+        # Retrieve the selected criteria
+        selected_jobs = self.job.all()
+        selected_departments = self.department.all()
+        selected_grades = self.salary_grade.all()
+
+        # Filter employees based on the criteria selected
+        employees = Employee.objects.all()
+        filtered_employees = [
+            employee for employee in employees
+            if (not selected_jobs or employee.job in selected_jobs) and 
+               (not selected_departments or (employee.job and employee.job.department in selected_departments )) and 
+               (not selected_grades or employee.salary_grade in selected_grades)
+        ]
+        return filtered_employees
+    
+    def display_sms_job(self):
+        return ",".join(job.job_title for job in self.job.all())
+
+    def display_sms_department(self):
+        return ",".join(department.department_name for department in self.department.all())
+
+    def display_sms_grade(self):
+        return ",".join(grade.grade for grade in self.salary_grade.all())
+    
 class Attendance(models.Model):
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='attendances')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='attendances')
-    check_in_time = models.DateTimeField(null=True, blank=True)
+    check_in_time = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -303,3 +384,29 @@ class PublicHoliday(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.date.strftime('%d %b, %Y')})"
+
+class Skill(models.Model):
+    SKILL_CATEGORY_CHOICES = [
+    ('technical', 'Technical Skills'),
+    ('project_management', 'Project Management & Leadership'),
+    ('marketing', 'Marketing & Sales'),
+    ('finance', 'Finance & Accounting'),
+    ('hr', 'Human Resources'),
+    ('design', 'Design & Creative'),
+    ('customer_service', 'Customer Service & Support'),
+    ('operations', 'Operations & Supply Chain'),
+    ('legal', 'Legal & Compliance'),
+    ('soft_skills', 'Soft Skills'),
+    ('languages', 'Languages'),
+]
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=50, choices=SKILL_CATEGORY_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('name', 'category')
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"  # Show skill with category in string representation
+

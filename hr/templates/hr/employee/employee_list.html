@@ -149,9 +149,15 @@
                         return meta.row + 1; // Serial number, starts from 1
                     }
                 },
-                {"data":"first_name", "orderable":false},
+                {"data":"first_name", "orderable":false, "render":function(data, type, row){
+                    const {photoURL, staffURL, staffName } = data
+                    return `<img src="${photoURL}"  alt="contact-img" title="contact-img" class="rounded-circle me-2 avatar-sm"> <a href="${staffURL}" class="text-body fw-semibold">${staffName}</a>`
+                }},
                 { "data": "employee_id" },
-                {"data": "status"},
+                {"data": "status", "render":function(data, type, row){
+                    const { theme, status } = data
+                    return `<span class='badge bg-${theme}'>${status}</span>`
+                }},
                 { "data": "dob", 'type':'num' }, 
                 { "data": "phone_number" },
                 { "data": "job" },

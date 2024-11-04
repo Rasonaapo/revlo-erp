@@ -33,6 +33,9 @@
 
                     <p class="text-muted mb-2 font-13"><strong>TIN :</strong> <span class="ms-2">{{employee.tin|default:'-'}}</span></p>
 
+                    <p class="text-muted mb-2 font-13"><strong>Skills :</strong> <span class="ms-2">{{ employee.display_employee_skill }}</span></p>
+
+
                     <p class="text-muted mb-2 font-13"><strong>Added :</strong> <span class="ms-2">{{employee.created_at|date:'d M, Y'}}</span></p>
 
                     <p class="text-muted mb-2 font-13"><strong>Updated :</strong> <span class="ms-2">{{employee.updated_at|date:'d M, Y'}}</span></p>

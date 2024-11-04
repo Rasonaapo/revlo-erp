@@ -10,7 +10,7 @@ class Command(BaseCommand):
         yesterday = date.today() - timedelta(days=1)
         
         # Find leave requests that ended yesterday and update their status
-        expired_leaves = LeaveRequest.objects.filter(end_date=yesterday, status='Approved')
+        expired_leaves = LeaveRequest.objects.filter(end_date__lt=date.today(), status='Approved')
         with transaction.atomic():
             for leave in expired_leaves:
                 leave.status = 'Expired'

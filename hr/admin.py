@@ -6,7 +6,8 @@ from .models.payroll import *
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'employee_id', 'status',  'photo', 'email', 'phone_number', 'hire_date', 'salary_grade', 'job', 'ssnit', 'tin', 'bank', 'branch', 'account_number', 'id_type', 'id_number', )
+    list_display = ('first_name', 'last_name', 'employee_id', 'status',  'photo', 'email', 'phone_number', 'hire_date', 'salary_grade', 'job', 'ssnit', 'tin', 'bank', 'branch', 'account_number', 'id_type', 'id_number',)
+    list_filter = ['skills']
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -74,3 +75,8 @@ class LeaveRequestAdmin(admin.ModelAdmin):
 class PublicHolidayAdmin(admin.ModelAdmin):
     list_display = ('name', 'date')
     list_filter = ['date']
+
+@admin.register(Skill)
+class SkillAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category')
+    list_filter = ['category']

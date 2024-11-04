@@ -1,6 +1,6 @@
 from typing import Any
 from django import forms
-from ..models.employee import JobHistory, Employee, Guarantor, Document, DocumentType, LeaveRequest
+from ..models.employee import JobHistory, Employee, Guarantor, Document, DocumentType, LeaveRequest, Skill, Meeting, SMS
 from datetime import date
 from django.core.exceptions import ValidationError
 import re
@@ -34,6 +34,12 @@ class EmployeeForm(forms.ModelForm):
         exclude = ['created_at', 'updated_at']
         widgets = {
             'dob':forms.DateInput(attrs={'type':'date', 'class':'datepicker', 'required':'required'}),
+            'skills':forms.SelectMultiple(attrs={
+                'class': 'form-control select2-multiple', 
+                'data-toggle': 'select2', 
+                'multiple': 'multiple', 
+                'data-placeholder': 'Choose skills...'
+            })
         }
 
     def clean_phone_number(self):
@@ -64,6 +70,7 @@ class EmployeeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(EmployeeForm, self).__init__(*args, **kwargs)
         self.fields['tin'].required = False
+        self.fields['skills'].queryset = Skill.objects.all().order_by('category', 'name')
 
 class GuarantorForm(forms.ModelForm):
     class Meta:
@@ -136,3 +143,64 @@ class LeaveRequestForm(forms.ModelForm):
         if start_date < date.today():
             raise forms.ValidationError("Start date cannot be in the past.")
         return start_date
+
+class SMSForm(forms.ModelForm):
+    class Meta:
+        model = SMS
+        exclude = ['created_at', 'updated_at', 'status']
+        widgets = {
+            'sms_date':forms.DateTimeInput(attrs={'type':'datetime', 'class':'datetimepicker'})
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super(SMSForm, self).__init__(*args, **kwargs)
+        self.fields['job'].required = False
+        self.fields['department'].required = False
+        self.fields['salary_grade'].required = False
+
+        def clean_sms_date(self):
+            sms_date = self.cleaned_data.get("sms_date")
+            if sms_date.date() < date.today():
+                raise forms.ValidationError("SMS date must not be in the past")
+            return sms_date
+           
+
+
+class MeetingForm(forms.ModelForm):
+    class Meta:
+        model = Meeting
+        exclude = ['created_at', 'updated_at']
+        widgets = {
+            'meeting_date':forms.DateTimeInput(attrs={'type':'datetime', 'class':'datetimepicker'}),
+            'sms_date':forms.DateTimeInput(attrs={'type':'datetime', 'class':'datetimepicker'})
+        } 
+    
+    def __init__(self, *args, **kwargs):
+        super(MeetingForm, self).__init__(*args, **kwargs)
+        self.fields['sms'].required = True
+        self.fields['job'].required = False
+        self.fields['department'].required = False
+        self.fields['salary_grade'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        meeting_date = cleaned_data.get('meeting_date')
+        sms_date = cleaned_data.get('sms_date')
+
+        # Ensure SMS date & time is less or precedes meeting date & time
+        if sms_date and meeting_date and  sms_date >= meeting_date:
+            raise forms.ValidationError("SMS date & time must precede the actual day of the meeting")
+        return cleaned_data
+    
+    def clean_meeting_date(self):
+        meeting_date = self.cleaned_data.get('meeting_date')
+        if meeting_date.date() < date.today():
+            raise forms.ValidationError("Meeting date must not be in the past")
+        return meeting_date
+    
+    def clean_sms_date(self):
+        sms_date = self.cleaned_data.get('sms_date')
+        if sms_date.date() < date.today():
+            raise forms.ValidationError("SMS date must not be in the past")
+        return sms_date

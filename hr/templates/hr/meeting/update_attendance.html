@@ -1,0 +1,145 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block scripts %}
+  <script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+              <form action="" method="POST" id="save-form" novalidate>
+                {% csrf_token %}
+                {{ form|crispy }}
+                
+                <table class="table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Employee</th>
+                            <th>Last Updated</th>
+                            <th>Check In Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attendance in attendances %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ attendance.employee.first_name  }} {{ attendance.employee.last_name}}</td>
+                            <td>{{ attendance.updated_at|date:'d M, Y h:i A'}}</td>
+                            <td>
+                                <input type="time" 
+                                       class="form-control timepicker" 
+                                       name="check_in_time_{{ attendance.id }}" 
+                                       value="{{ attendance.check_in_time|date:'H:i'|default:'' }}" 
+                            /></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3">
+                            </th>
+                            <th>
+                                <a href="{% url 'meeting-list' %}">
+                                    <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                                </a>
+                                <button type="submit" id="save-btn" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>        
+                            </th>
+                        </tr>
+                    </tfoot>
+                </table>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 
+
+{% block javascript %}
+<script>
+ $(document).ready(function(){
+      
+        $('#save-form').submit(function (event) {
+             // create an AJAX call
+             event.preventDefault()
+             var form = $(this);
+             var url = form.data("action");  // Retrieve the URL from data-action attribute
+             var formData = new FormData(this)
+
+              $.ajax({
+                    data: formData, // get the form data
+                    type: form.attr('method'), // GET or POST
+                    processData: false,  // Prevent jQuery from processing the data
+                    contentType: false,  // Prevent jQuery from setting the content type
+                    url: url,
+                    beforeSend: function(){
+                     //$('#login-spinner').show();
+                    $('#save-btn').html(`Saving... <i class="fas fa-spinner ml-1"></i>`).attr('disabled', 'yes');
+                    },
+                    // on success
+                    success: function (response) {
+                        const {message, status } = response
+                        status == 'fail' && Swal.fire('Oops', message, 'warning') && $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Save Record`).removeAttr('disabled')
+
+                        if(status == 'success'){
+
+                            Swal.mixin({
+                            toast: !0,
+                            position: "top-end",
+                            showConfirmButton: !1,
+                            timer: 3e3,
+                            timerProgressBar: !0,
+                            onOpen: function (t) {
+                                t.addEventListener("mouseenter", Swal.stopTimer), t.addEventListener("mouseleave", Swal.resumeTimer);
+                            },
+                            }).fire({ icon: "success", title: message });
+                            setTimeout(function(){
+                                // clear form & close modal, after that load Positions..
+
+                                $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Save Record`).removeAttr('disabled')
+                                location.href = "{% url 'meeting-list' %}"
+
+                            }, 3e3)
+                        }
+                    },
+                    // on error
+                    error: function (request, status, error) {
+                        // alert the error if any error occured
+                        $('#save-btn').html('<i class="fe-check-circle me-1"></i> Save Record').removeAttr('disabled')
+
+                        if(error != 'Bad Request'){
+                            Swal.fire('Error', 'Sorry, an error occured, please try again later or contact system admin', 'error')
+                        }else{
+                            let errorText = '<ul>'
+                                console.log(request.responseJSON.errors)
+
+                                let data = request.responseJSON.errors
+
+                                $.each(data, function(index, item){
+                                    console.log(index)
+                                    console.log(item)
+                                    errorText += '<li>'+ '<b>' + index +'</b> - '+ item[0] + '</li>'
+                                })
+                                errorText += '</ul>'
+                                Swal.fire({
+                                        title: "<span style='color:red'>Rectify the ff <strong>error(s)</strong></span>",
+                                        type: "warning",
+                                        html: errorText,
+                                 });
+                         }
+                    }
+                });
+                return false;
+            }); 
+    })
+</script>
+
+{% endblock %}
