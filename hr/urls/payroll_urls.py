@@ -9,5 +9,7 @@ urlpatterns = [
     path('salary-grades/<int:pk>/update/', SalaryGradeUpdateView.as_view(), name='salarygrade-update'),
     path('salary-grades/<int:pk>/delete/', delete_salary_grade, name='salarygrade-delete'),
     path('salary-grades/api/', SalaryGradeListApiView.as_view(), name="salarygrade-list-api"),
-
+    path('setup-tax/', setup_tax, name='setup-tax'),
+    path('load-tax/', load_tax, name='load-tax'),
+    path('test-tax/<str:amount>/', test_tax, name='test-tax'),
 ]

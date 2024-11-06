@@ -59,3 +59,29 @@ class Tax(models.Model):
     def __str__(self):
         return f"Tax for year {self.year} - Block: {self.block}, Rate: {self.rate}"
 
+    @classmethod
+    def calculate_tax(cls, year, amount):
+        tax = 0
+        position = 1
+        previous_block = 0
+
+        tax_blocks  = cls.objects.filter(year=year).order_by('rate')
+        for item in tax_blocks:
+            block = item.block
+            rate = item.rate
+
+            if amount > block:
+                block_tax = (rate / 100) * block
+                tax = tax + block_tax
+                if position > 1:
+                    amount = amount - previous_block
+            else:
+                amount = amount - previous_block
+                block_tax = (rate / 100) * amount
+                tax += block_tax
+                break
+        
+            position += 1
+            previous_block = block
+        
+        return tax

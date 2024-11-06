@@ -267,6 +267,9 @@ class SMS(models.Model):
     )
     status = models.CharField(choices=SMS_STATUS, default='pending', max_length=10)
 
+    class Meta:
+        verbose_name_plural = 'Sms'
+
     def __str__(self):
         return f"{self.message[:20]} on {self.sms_date.strftime('%d %b, %Y %I:%M %p')}"
     

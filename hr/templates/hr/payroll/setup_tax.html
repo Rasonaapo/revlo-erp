@@ -1,0 +1,277 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block scripts %}
+  <script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-lg-8 col-xl-8">
+                <form action="" method="POST" id="save-form">
+                    {% csrf_token %}
+                    <div id="main-data">
+                    </div>
+                    <table id="table">
+                        <thead></thead>
+                        <tbody></tbody>
+                        <tfoot style="display: none;">
+                            <tr>
+                                <td colspan="2">
+                                    <button type="button" id="add-row" class="btn btn-xs btn-info rounded-pill waves-effect waves-light m-1"> <i class="fa fa-plus"></i> Add line</button> 
+                                    <button type="button" id="del-row" class='btn btn-xs btn-danger rounded-pill waves-effect waves-light m-1'><i class="fa fa-trash"></i> Clear line</button> 
+                                </td>
+                                <td>
+                                    <button type="submit" id="save-btn" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </form>
+
+                <div id="spinner" style="display:none;"><center><div class="spinner-border text-success m-2" role="status"></div><br>Loading Tax...</center></div>
+
+            </div>
+
+            <div class="col-lg-4 col-xl-4">
+                <div id="test">
+                    <h3>Enter Basic Salary (₵) For Testing</h3>
+                   <table>
+                    <tr>
+                        <td><input type="text" id="basic-salary" class="form-control amount" /></td>
+                        <td>
+                            <button type="button" id="test-btn" class="btn btn-info rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Test Amount</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><span id="tax"></span></td>
+                    </tr>
+                   </table>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        
+        function isNumber(evt, element) {
+            var charCode = (evt.which) ? evt.which : evt.keyCode
+
+            if (
+                (charCode != 45 || $(element).val().indexOf('-') != -1) &&      // “-” CHECK MINUS, AND ONLY ONE.
+                (charCode != 46 || $(element).val().indexOf('.') != -1) &&      // “.” CHECK DOT, AND ONLY ONE.
+                (charCode != 8) &&                                              // CHECK FOR BACK-SPACE.
+                (charCode < 48 || charCode > 57))
+                return false;
+
+            return true;
+        } 
+
+        $('.amount').keypress(function (event) {
+            return isNumber(event, this);
+         });
+
+        function tableHead(){
+            return  `<tr>
+                        <th>Position</th>
+                        <th>Block Amout (GHC)</th>
+                        <th>Block Rate(%) - Deduct<th>
+                    </tr>`
+            
+        }
+        function tableRows(){
+		    return $('#table >tbody>tr').length
+	    }
+
+        function createInput(type, name, classes, options, value){
+		    return `<input type="${type}" name='${name}' class='${classes}' ${options} value='${value != 0 && value == null ||  value == '' ? '' : value}' />`
+	    }
+
+        function createRow(line, block, rate,id){
+            let row = `
+                 <tr>
+                    <th>${line == 1 ? "First" : "Next"}</th>
+                    <td>
+                        ${createInput('text', 'block[]', 'amount form-control', 'required', block)}
+                    <td>
+                        ${createInput('text', 'rate[]', 'amount form-control', 'required', rate)}
+                        ${createInput('hidden', 'position[]', '', '', id )}
+                    </td>
+                 </tr>`
+                 return row;                  
+        }
+
+        async function loadYearlyTax(){
+            $('#spinner').show()
+            try{
+                const taxURL = `{% url 'load-tax' %}`
+                const response = await fetch(taxURL);
+                const data = await response.json();
+
+                
+                if(data.length > 0){
+
+                let tbl = tableHead()
+
+                let line = 1;
+                data.forEach(item => {
+                    let { id, block, rate } = item;
+                    rate = rate == 0 ? '0' : rate
+                    tbl += createRow(line, block, rate, id)
+                                    
+                    line++;
+                })
+
+                    $('#table tbody').empty().append(tbl)
+                    $('.alert').hide();
+                    $('#table tfoot').show() 
+
+                    $('.amount').keypress(function (event) {
+                            return isNumber(event, this);
+                    });
+
+                }else{
+                    $('#main-data').append(`<center class="text-muted mb-5"><span class="text-danger">Oops, it appears there is no tax setup for this year. Use the inputs below to setup one! </span></center>`)
+
+                    // create a row and return from the function..create hidden add/delete buttons with update button and display it automatically..
+                    let row = createRow(1)
+                    $('#table thead').append(tableHead)
+                    $('#table tbody').append(row, '', '','')
+                    $('#table tfoot').show() 
+
+                    $('.amount').keypress(function (event) {
+                            return isNumber(event, this);
+                    });           
+                }
+
+            }catch(err){
+                console.error(err)
+            }
+            $('#spinner').hide();
+        }
+
+        loadYearlyTax()
+
+        // At this point we have at least some tax blocks whether filled or not filled isn't necessary at this point
+        // We provide add and delete row functionality below
+
+    $('#add-row').click(function(){
+		let rowCount = tableRows();
+		let currentLine = rowCount + 1;
+
+		let tableForm = createRow(currentLine)
+		$('#table tbody').append(tableForm)
+	})
+
+	$('#del-row').click(function(){
+		let rowCount = tableRows();
+		rowCount <= 1 ? Swal.fire('Oops', 'Sorry, You can\'t delete a row at this point!', 'warning') : $('#table tbody tr:last').remove();
+	})
+
+	let btnBefore = 'Saving...';
+	let btnSuccess = 'Save Record';
+
+    // create a function to test basic salary tax here
+    async function testAmount(amount){
+        $('#test-btn').html(`Testing... <i class="fas fa-spinner ml-1"></i>`).attr('disabled', 'yes');
+        try{
+            const testURL = `{% url 'test-tax' 0 %}`.replace('0', amount)
+            const response = await fetch(testURL)
+            const data = await response.json()
+            console.log(data)
+            $('#tax').empty().html(`<h4><span class="text-danger">Tax:</span> ₵${data} </h4>`)
+        }catch(e){
+          console.error(e)
+        }
+       $('#test-btn').html(`<i class="fe-check-circle me-1"></i> Test Amount`).removeAttr('disabled')
+    }
+
+    $('#test-btn').click(function(){
+        const basicSalary = $('#basic-salary').val()
+        basicSalary != '' && testAmount(basicSalary)
+    })
+
+    $('#save-form').submit(function (event) {
+             // create an AJAX call
+             event.preventDefault()
+             var form = $(this);
+             var url = form.data("action");  // Retrieve the URL from data-action attribute
+             var formData = new FormData(this)
+
+              $.ajax({
+                    data: formData, // get the form data
+                    type: form.attr('method'), // GET or POST
+                    processData: false,  // Prevent jQuery from processing the data
+                    contentType: false,  // Prevent jQuery from setting the content type
+                    url: url,
+                    beforeSend: function(){
+                     //$('#login-spinner').show();
+                    $('#save-btn').html(`Saving... <i class="fas fa-spinner ml-1"></i>`).attr('disabled', 'yes');
+                    },
+                    // on success
+                    success: function (response) {
+                        const {message, status } = response
+                        status == 'fail' && Swal.fire('Oops', message, 'warning') && $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Save Record`).removeAttr('disabled')
+
+                        if(status == 'success'){
+
+                            Swal.mixin({
+                            toast: !0,
+                            position: "top-end",
+                            showConfirmButton: !1,
+                            timer: 3e3,
+                            timerProgressBar: !0,
+                            onOpen: function (t) {
+                                t.addEventListener("mouseenter", Swal.stopTimer), t.addEventListener("mouseleave", Swal.resumeTimer);
+                            },
+                            }).fire({ icon: "success", title: message });
+                            setTimeout(function(){
+                                // clear form & close modal, after that load Positions..
+
+                                $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Save Record`).removeAttr('disabled')
+                                location.reload()
+
+                            }, 3e3)
+                        }
+                    },
+                    // on error
+                    error: function (request, status, error) {
+                        // alert the error if any error occured
+                        $('#save-btn').html('<i class="fe-check-circle me-1"></i> Save Record').removeAttr('disabled')
+
+                        if(error != 'Bad Request'){
+                            Swal.fire('Error', 'Sorry, an error occured, please try again later or contact system admin', 'error')
+                        }else{
+                            let errorText = '<ul>'
+                                console.log(request.responseJSON.errors)
+
+                                let data = request.responseJSON.errors
+
+                                $.each(data, function(index, item){
+                                    console.log(index)
+                                    console.log(item)
+                                    errorText += '<li>'+ '<b>' + index +'</b> - '+ item[0] + '</li>'
+                                })
+                                errorText += '</ul>'
+                                Swal.fire({
+                                        title: "<span style='color:red'>Rectify the ff <strong>error(s)</strong></span>",
+                                        type: "warning",
+                                        html: errorText,
+                                 });
+                         }
+                    }
+                });
+                return false;
+            }); 
+
+
+    })
+</script>
+{% endblock %}
