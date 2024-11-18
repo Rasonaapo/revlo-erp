@@ -1,5 +1,6 @@
 from datetime import timedelta
 from hr.models.employee import PublicHoliday
+from hr.models.payroll import SalaryItem
 from datetime import datetime
 
 def calculate_end_date(start_date, days_requested):
@@ -18,3 +19,21 @@ def calculate_end_date(start_date, days_requested):
 
 def get_current_year():
     return datetime.now().year
+
+def item_expiry_status(expiry_date):
+   today = datetime.now().date()
+   return today < expiry_date
+
+def compute_factor(employee, rate_amount, rate_dependency):
+    basic_salary = employee.salary_grade.amount
+
+    # if rate dependency is Basic, use rate amount to get the percentage of that..
+    if rate_dependency == 'Basic':
+        amount = (rate_amount / 100) * basic_salary
+    else:
+        # get the rate amount of the selected item whose id is rate dependency
+        salary_item = SalaryItem.objects.get(id=rate_dependency)
+        amount = (rate_amount / 100) * salary_item.rate_amount
+    
+    return amount
+    

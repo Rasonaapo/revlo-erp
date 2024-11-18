@@ -49,6 +49,9 @@
                             <div class="form-group">
                                 {{ form.ssnit|as_crispy_field }}
                             </div>
+                            <div class="form-group">
+                                {{ form.status|as_crispy_field }}     
+                            </div>
                         </div>
                         
                         <!-- Second column -->
@@ -65,24 +68,8 @@
                             <div class="form-group">
                                 {{ form.tin|as_crispy_field }}
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
                             <div class="form-group">
-                                <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
-                                <select class="form-control select2-multiple" data-toggle="select2" multiple="multiple" id="{{ form.skills.id_for_label }}" name="{{ form.skills.name }}" data-placeholder="Choose skills...">
-                                    {% for category, skills in categorized_skills.items %}
-                                    <optgroup label="{{ category|title }}">
-                                        {% for skill in skills %}
-                                        <option value="{{ skill.id }}" {% if skill.id in form.skills.value %}selected{% endif %}>
-                                            {{ skill.name }}
-                                        </option>
-                                        {% endfor %}
-                                    </optgroup>
-                                    {% endfor %}
-                                </select>
+                                {{ form.employment_type|as_crispy_field }}
                             </div>
                         </div>
                     </div>
@@ -107,8 +94,7 @@
                     <div class="row mb-2">                 
                         <div class="col-md-6">
                             {{ form.job|as_crispy_field }}
-                            {{ form.status|as_crispy_field }}
-
+                           
                         </div>
 
                         <div class="col-md-3">
@@ -116,6 +102,25 @@
                         </div>
                         <div class="col-md-3">
                             {{ form.salary_grade|as_crispy_field }} 
+
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
+                                <select class="form-control select2-multiple" data-toggle="select2" multiple="multiple" id="{{ form.skills.id_for_label }}" name="{{ form.skills.name }}" data-placeholder="Choose skills...">
+
+                                </select>
+                                <button style="display: none;" id="skills-loader" class="btn btn-default" style="border-style: none; color:blue" type="button" disabled="">
+                                    <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true"></span>
+                                    Loading required skills...
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            {{ form.designation|as_crispy_field }}
 
                         </div>
                     </div>
@@ -162,6 +167,37 @@
 
         $('.select').select2();
         $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+
+        const selectedJob = $('#id_job').val()
+        const preselectedSkills = "{{ selected_skills|safe }}"
+
+        if(selectedJob){
+            loadSkills(selectedJob, preselectedSkills)
+        }
+
+        $('#id_job').change(function(){
+            loadSkills($(this).val(), []) // reset skills when job is changed..
+        })
+
+        // function to fetch job related skills dynamically
+        function loadSkills(job_id, preselectedSkills){
+            $('#skills-loader').show()
+            $.ajax({
+                url: "{% url 'load-skills' %}",
+                data: {'job_id':job_id},
+                dataType: 'json',
+                success: function(data){
+                    $('#id_skills').empty()
+                    data.forEach(function(skill){
+                        // check if a skill was preselected, if so select
+                        const isSelected = preselectedSkills.includes(skill.id.toString()) ? 'selected': ''
+                        $('#id_skills').append(`<option value="${skill.id}" ${isSelected}> ${skill.name}</option>`)
+                    })
+                    $('#skills-loader').hide()
+                }
+            })
+        }
+
 
     });
 </script> 

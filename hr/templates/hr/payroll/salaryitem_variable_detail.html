@@ -1,0 +1,100 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-2"></div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST">
+                    {% csrf_token %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Staff #</th>
+                                <th>Name</th>
+                                <th>{{ salary_item.rate_dependency }} x {{ salary_item.rate_amount }}</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in employees %}
+                                <tr>
+                                    <th>{{ forloop.counter }}</th>
+                                    <td>{{ item.employee.employee_id }}</td>
+                                    <td>{{ item.employee.first_name }} {{ item.employee.last_name }}</td>
+                                    <td>
+                                        <input type="text" class="amount form-control" id="{{ item.id }}" name="variable_{{ item.id }}" value="{{ item.variable|default:'' }}">
+                                    </td>
+                                    <td>
+                                        <span class="line_{{ item.id }}">{{ item.amount|default:'<i class="far fa-question-circle text-danger"></i>'}}</span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan='2'>
+                                    <a href="{% url 'salaryitem-list' %}">
+                                        <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                                      </a>
+                                </td>
+                                <td colspan='2'></td>
+                                <td>
+
+                                    <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+ <script>
+    $(document).ready(function(){
+        
+        function isNumber(evt, element) {
+            var charCode = (evt.which) ? evt.which : evt.keyCode
+            if (
+                (charCode != 45 || $(element).val().indexOf('-') != -1) &&      // “-” CHECK MINUS, AND ONLY ONE.
+                (charCode != 46 || $(element).val().indexOf('.') != -1) &&      // “.” CHECK DOT, AND ONLY ONE.
+                (charCode != 8) &&                                              // CHECK FOR BACK-SPACE.
+                (charCode < 48 || charCode > 57))
+                return false;
+    
+            return true;
+        }
+    
+       $('.amount').keypress(function (event) {
+               return isNumber(event, this);
+       });
+
+       Number.prototype.format = function(n, x) {
+         var re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')';
+         return this.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,');
+        };
+    
+      $('.amount').on('keyup keypress blur change paste cut', function(e){
+        let line = $(this).attr('id');
+        let variable = $(this).val();
+        let rateAmount = "{{ salary_item.rate_amount|safe }}"
+        if(variable == null || variable == ''){
+          $('.line_'+line).html(`<i class="far fa-question-circle text-danger"></i>`)
+        }else{ 
+          let formatVariable = Number(variable)
+          let formatRate = Number(rateAmount);
+           $('.line_'+line).html(`${(formatVariable * formatRate).format(2)}`)
+        }
+     });
+    
+    })
+ </script>  
+{% endblock %}

@@ -12,11 +12,13 @@ from django.views.generic.edit import FormMixin
 from hr.models.employee import *
 from django.urls import reverse_lazy
 from django import forms
-from ..forms.employee_forms import JobHistoryForm, EmployeeForm, GuarantorForm, DocumentUploadForm, MeetingForm, SMSForm
+from ..forms.employee_forms import JobHistoryForm, EmployeeForm, GuarantorForm, DocumentUploadForm, MeetingForm, SMSForm, JobForm
 from django.forms import modelformset_factory
 import pdb
 from django.db.models import Count
 from django.db import transaction, IntegrityError, DatabaseError
+from django.utils.safestring import mark_safe
+import json
 
 
 # Create your views here.
@@ -80,6 +82,86 @@ def delete_department(request, pk):
     
     return render(request, 'core/delete.html', {'obj':dept, 'title': f'Delete {dept}?'})
 
+class DepartmentEmployeeDetailView(LoginRequiredMixin, DetailView):
+    model = Department
+    template_name = 'hr/generic/item_detail.html'
+    context_object_name = 'department'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"Employees in {self.get_object().department_name} "
+        context['item'] = 'department'
+        context['employees'] = Employee.objects.filter(job__department=self.get_object())
+        return context
+
+# Designations Views
+class DesignationListView(LoginRequiredMixin, ListView):
+    model = Designation
+    template_name = 'hr/employee/designation_list.html'
+    context_object_name = 'designation_list'
+
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        context['title'] = 'Designations'
+        # get distinct level for filters
+        context['level_list'] = Designation.objects.values('level').distinct()
+        return context
+
+class DesignationCreateView(LoginRequiredMixin, CreateView):
+    model = Designation
+    template_name = 'hr/employee/designation_form.html'
+    fields = ['code', 'title', 'level']  
+    success_url = reverse_lazy('designation-list')  
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Add Designation'
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, f'Designation [{form.instance.title}] created successfully.')
+        return super().form_valid(form)
+
+class DesignationUpdateView(LoginRequiredMixin, UpdateView):
+    model = Designation
+    template_name = 'hr/employee/designation_form.html'
+    fields = ['code', 'title', 'level']  
+    context_object_name = 'designation'
+    success_url = reverse_lazy('designation-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"Update Designation ({self.get_object().title })"
+        return context  
+
+    def form_valid(self, form):
+        # Any additional logic before saving can be added here
+        messages.success(self.request, f'Designation  [{form.instance.title}] updated successfully.')
+        return super().form_valid(form)  
+
+@login_required
+def delete_designation(request, pk):
+    designation = Designation.objects.get(id=pk)
+
+    if request.method == "POST":
+        designation.delete()
+        messages.success(request, f"{designation} successfully deleted")
+        return redirect('designation-list')
+    
+    return render(request, 'core/delete.html', {'obj':designation, 'title': f'Delete {designation}?'})
+
+class DesignationEmployeeDetailView(LoginRequiredMixin, DetailView):
+    model = Designation
+    template_name = 'hr/generic/item_detail.html'
+    context_object_name = 'designation'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"Employees holding {self.get_object().title} "
+        context['item'] = 'designation'
+        context['employees'] = Employee.objects.filter(designation=self.get_object())
+        return context
+
 # Job Views
 
 class JobListView(LoginRequiredMixin, ListView):
@@ -98,17 +180,25 @@ class JobListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Jobs'
+        context['departments'] = Department.objects.filter(jobs__isnull=False).distinct()
         return context  
 
 class JobCreateView(LoginRequiredMixin, CreateView):
     model = Job
     template_name = 'hr/employee/job_form.html'
-    fields = ['job_title', 'department', 'min_salary', 'max_salary', 'currency']  
+    form_class = JobForm
     success_url = reverse_lazy('job-list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Add Job'
+        # Group skills by category for rendering in template
+        skills_by_category = Skill.objects.values('category').annotate(skill_count=Count('id')).order_by('category')
+        categorized_skills = {
+            category['category']: Skill.objects.filter(category=category['category']) 
+            for category in skills_by_category
+        }
+        context['categorized_skills'] = categorized_skills
         return context
 
     def form_valid(self, form):
@@ -118,12 +208,19 @@ class JobCreateView(LoginRequiredMixin, CreateView):
 class JobUpdateView(LoginRequiredMixin, UpdateView):
     model = Job
     template_name = 'hr/employee/job_form.html'
-    fields = ['job_title', 'department', 'min_salary', 'max_salary', 'currency']
+    form_class = JobForm
     success_url = reverse_lazy('job-list')
 
     def get_context_data(self, **kwargs):
         context =  super().get_context_data(**kwargs)
-        context['title'] = 'Update Job'
+        context['title'] = f"Update Job ({self.get_object().job_title})"
+        # Group skills by category for rendering in template
+        skills_by_category = Skill.objects.values('category').annotate(skill_count=Count('id')).order_by('category')
+        categorized_skills = {
+            category['category']: Skill.objects.filter(category=category['category']) 
+            for category in skills_by_category
+        }
+        context['categorized_skills'] = categorized_skills
         return context
     
     def form_valid(self, form):
@@ -139,8 +236,22 @@ def delete_job(request, pk):
         return redirect('job-list')
 
     return render(request, 'core/delete.html', {'obj':job, 'title': f'Delete {job}?'})
-  
-  # Job History
+
+class JobEmployeeDetailView(LoginRequiredMixin, DetailView):
+    model = Job
+    template_name = 'hr/generic/item_detail.html'
+    context_object_name = 'job'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"{self.get_object().job_title} Employees"
+        context['item'] = 'job'
+        context['employees'] = Employee.objects.filter(job=self.get_object())
+        
+        return context
+
+
+# Job History
 
 class JobHistoryListView(LoginRequiredMixin, ListView):
     model = JobHistory
@@ -155,6 +266,8 @@ class JobHistoryListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Job Histories'
+        context['designations'] = Designation.objects.filter(job_history__isnull=False).distinct()
+        context['jobs'] = Job.objects.filter(job_history__isnull=False).distinct()
         return context  
 
 class JobHistoryCreateView(LoginRequiredMixin, CreateView):
@@ -209,7 +322,7 @@ class EmployeeListView(LoginRequiredMixin, ListView):
         context.update({
             'title':'Employees',
             'id_list': NationalIDType.objects.all(),
-            'job_list':Job.objects.all(),
+            'designation_list':Designation.objects.all(),
             'department_list':Department.objects.all(),
             'salary_grade_list':SalaryGrade.objects.all(),
             'bank_list':Bank.objects.all(),
@@ -234,6 +347,7 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
             category['category']: Skill.objects.filter(category=category['category']) 
             for category in skills_by_category
         }
+        context['selected_skills'] =  self.request.POST.getlist('skills') if self.request.method == "POST" else []
         context['categorized_skills'] = categorized_skills
 
         if self.request.POST:
@@ -269,6 +383,7 @@ class EmployeeCreateView(LoginRequiredMixin, CreateView):
                 JobHistory.objects.create(
                     employee=employee,
                     job=employee.job,
+                    designation=employee.designation,
                     start_date=employee.hire_date
                 )
                 self.create_leave_balances(employee)
@@ -296,19 +411,19 @@ class EmployeeUpdateView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context =  super().get_context_data(**kwargs)
         context['title'] = 'Update Employee'
-
-        # Group skills by category for rendering in template
-        skills_by_category = Skill.objects.values('category').annotate(skill_count=Count('id')).order_by('category')
-        categorized_skills = {
-            category['category']: Skill.objects.filter(category=category['category']) 
-            for category in skills_by_category
-        }
-        context['categorized_skills'] = categorized_skills
+        employee = self.get_object()
+        
+        # retrieve skills and send to the template as selected_skills if job was selected and skills was selected during form creation
+        selected_skills = []
 
         if self.request.POST:
             context['guarantor_form'] = GuarantorForm(self.request.POST, instance=self.get_first_guarantor())
+            selected_skills = self.request.POST.getlist('skills') or []
         else:
             context['guarantor_form'] = GuarantorForm(instance=self.get_first_guarantor())
+            if employee.job and employee.skills.exists():
+                selected_skills =  [{'id':skill.id, 'name': skill.name} for skill in employee.skills.all()]
+        context['selected_skills'] = selected_skills
         return context
     
     def get_first_guarantor(self):

@@ -19,18 +19,33 @@
                   <p>
                    <a href="{% url 'department-add' %}">
                     <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
-                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Dept.
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Designation
                     </button>
                    </a>
                   </p>
+
+
+            <p>
+                <div class="row">
+                 <div class="col-md-2">
+                     <label for="filterLevel" class="text-info">Filter by Level</label>
+                     <select id="filterLevel" class="form-control select2" data-toggle="select2" data-width="100%">
+                      <option value="">All Levels</option>
+                      {% for item in level_list %}
+                         <option value="{{ item.level }}"> {{ item.level }} </option>
+                      {% endfor %}
+                     </select>    
+                 </div>
+                </div>
+            </p>
 
                     <table id="Table" class="table table-hover dt-responsive nowrap w-100">
                         <thead>
                           <tr>
                               <th>#</th>
-                              <th>Department Name</th>
-                              <th>Manager</th>
-                              <th>Location</th>
+                              <th>Code</th>
+                              <th>Title/Rank</th>
+                              <th>Level</th>
                               <th>No. Staff</th>
                               <th>Created on</th>
                               <th>Actions</th>
@@ -48,12 +63,15 @@
 <script>
     $(document).ready(function() {
 
-        $('#Table').DataTable({
+       var table =  $('#Table').DataTable({
             "processing": true,
             "serverSide": true,
             "ajax": {
-                "url": "{% url 'department-list-api' %}",
-                "type": "GET"
+                "url": "{% url 'designation-list-api' %}",
+                "type": "GET",
+                 "data": function(d){
+                    d.level = $('#filterLevel').val()
+                }
             },
             "columns": [
                 { 
@@ -62,30 +80,36 @@
                     "searchable": false,
                     "render": function (data, type, row, meta) {
                         return meta.row + meta.settings._iDisplayStart + 1;
+
                     }
                 },
-                {"data":"department_name"},
-                { "data": "manager" },
-                { "data": "location" },
+                {"data":"code"},
+                { "data": "title" },
+                { "data": "level" },
                 {"data": "employee_count"},
                 { "data": "created_at" },
                 { "data": 'id', "orderable": false, "render": function(data, type, row) {
                  const id = row.id
 
                  const updateURL = `{% url 'department-update' 0 %}`.replace('0', id)
-                 const deleteURL = `{% url 'department-delete' 0 %}`.replace('0', id)
-                 const staffURL = `{% url 'department-employee' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'designation-delete' 0 %}`.replace('0', id)
+                 const staffURL =  `{% url 'designation-employee' 0 %}`.replace('0', id)
 
                     return `
-                           <a href="${updateURL}" title="Edit department"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
-                           <a href="${staffURL}" title="Employees in this department"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-users"></i></button></a>
-
-                           <a href="${deleteURL}" title="Delete department"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+                           <a href="${updateURL}" title="Edit designation"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                           <a href="${staffURL}" title="Employees with this designation"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-users"></i></button></a>
+                        
+                           <a href="${deleteURL}" title="Delete designation"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
     
                 }},
             ],
             "order": [[4, "desc"]]  // Default sorting by "created_at"
         });
+
+        $('#filterLevel').change(function(){
+            table.ajax.reload()
+        })
+    
 
     });
 </script>

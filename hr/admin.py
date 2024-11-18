@@ -6,7 +6,7 @@ from .models.payroll import *
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'employee_id', 'status',  'photo', 'email', 'phone_number', 'hire_date', 'salary_grade', 'job', 'ssnit', 'tin', 'bank', 'branch', 'account_number', 'id_type', 'id_number',)
+    list_display = ('first_name', 'last_name', 'employee_id', 'status',  'photo', 'email', 'phone_number', 'hire_date', 'salary_grade', 'job', 'ssnit', 'tin', 'bank', 'branch', 'account_number', 'id_type', 'id_number','display_employee_skill')
     list_filter = ['skills']
 
 @admin.register(Department)
@@ -19,7 +19,7 @@ class JobAdmin(admin.ModelAdmin):
 
 @admin.register(JobHistory)
 class JobHistoryAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'start_date', 'end_date', 'job', )
+    list_display = ('employee', 'start_date', 'end_date', 'job',  'designation')
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
@@ -48,7 +48,7 @@ class AttendanceAdmin(admin.ModelAdmin):
 # Payroll
 @admin.register(SalaryGrade) 
 class SalaryGradeAdmin(admin.ModelAdmin):
-    list_display = ('grade', 'step', 'amount', )
+    list_display = ('grade', 'step', 'grade_step', 'amount', )
 
 @admin.register(Bank)
 class BankAdmin(admin.ModelAdmin):
@@ -84,3 +84,25 @@ class PublicHolidayAdmin(admin.ModelAdmin):
 class SkillAdmin(admin.ModelAdmin):
     list_display = ('name', 'category')
     list_filter = ['category']
+
+@admin.register(SalaryStep)
+class SalaryStepAdmin(admin.ModelAdmin):
+    list_display = ['step']
+
+@admin.register(Designation)
+class DesignationAdmin(admin.ModelAdmin):
+    list_display = ('code', 'title', 'level', )
+
+@admin.register(SalaryItem)
+class SalaryItemAdmin(admin.ModelAdmin):
+    list_display = ('item_name', 'alias_name', 'effect', 'rate_type', 'rate_amount', 'rate_dependency', 'staff_source', )
+
+@admin.register(StaffSalaryItem)
+class StaffSalaryItemAdmin(admin.ModelAdmin):
+    list_display = ('salary_item', 'employee', 'variable', 'amount', 'active', )
+
+@admin.register(Loan)
+class LoanAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'loan_type', 'principal_amount', 'interest_rate', 'monthly_installment', 'status')
+    list_filter = ('loan_type', 'status')
+    search_fields = ('employee__first_name', 'employee__last_name')

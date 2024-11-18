@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap4',
     'widget_tweaks',
     'django.contrib.humanize',
+    'django_quill',
 
 ]
 

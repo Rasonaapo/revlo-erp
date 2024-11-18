@@ -1,58 +1,135 @@
 {% extends 'core/base.html' %} 
 {% load static %} 
 
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+
+{% endblock %}
+
+{% block scripts %}
+{% comment %} <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script> {% endcomment %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+
+{% endblock %}
+
 {% block content %} 
-    {% if job_history_list %}
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
-
+                  <p>
                    <a href="{% url 'job-history-add' %}">
                     <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
-                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New History
+                        <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Job History
                     </button>
                    </a>
+                  </p>
 
-                    <table class="table table-hover">
+                  <p>
+                    <div class="row">
+                     <div class="col-md-2">
+                         <label for="filterDesignation" class="text-info">Filter by Designation</label>
+                         <select id="filterDesignation" class="form-control select2" data-toggle="select2" data-width="100%">
+                          <option value="">All Designations</option>
+                          {% for designation in designations %}
+                             <option value="{{ designation.id }}"> {{designation.title}} </option>
+                          {% endfor %}
+                         </select>    
+                     </div>
+     
+                     <div class="col-md-2">
+                         <label for="filterJob" class="text-info">Filter by Job</label>
+                         <select id="filterJob" class="form-control select2" data-toggle="select2" data-width="100%">
+                             <option value="">All Jobs</option>
+                             {% for job in jobs %}
+                             <option value="{{ job.id }}"> {{job.job_title}} </option>
+                             {% endfor %}
+                         </select>    
+                     </div>
+                    </div>
+                   </p>
+
+                    <table class="table table-hover" id="Table">
                         <thead>
                           <tr>
                               <th>#</th>
                               <th>Employee</th>
                               <th>Job Title</th>
-                              <th>Department</th>
+                              <th>Designation</th>
                               <th>Start Date</th>
                               <th>End Date</th>
                               <th>Created on</th>
                               <th>Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {% for jhistory in job_history_list %}
-                           <tr>
-                              <td>{{ forloop.counter }}</td>
-                              <td>{{ jhistory.employee }}</td>
-                              <td>{{ jhistory.job }} </td>
-                              <td>{{ jhistory.department }}</td>
-                              <td>{{ jhistory.start_date|date:'d M, Y'}}</td>
-                              <td>{{ jhistory.end_date|date:'d M, Y'}}</td>
-                              <td>{{ jhistory.created_at|date:'d M, Y'}}</td>
-                              <td>
-                                    <a href="{% url 'job-history-update' jhistory.pk %}" title="Edit employee job history"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
-                                    <a href="{% url 'job-history-delete' jhistory.pk %}" title="Delete employee job history"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>                  
-                            </td>
-
-                            </tr>
-                          {% endfor %}
-                        </tbody>
+    
                       </table>
                 </div>
             </div>
         </div>
     </div>
-    {% else %}
-        <div class="alert alert-info" role="alert">
-            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no job history records in the system.  <a href="{% url 'job-history-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
-        </div>
-    {% endif %} 
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+       
+        $('[data-toggle="select2"]').select2()
+
+       var table =  $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'job-history-list-api' %}",
+                "type": "GET",
+                "data": function(d){
+                    d.filterJob=$('#filterJob').val(),
+                    d.filterDesignation=$('#filterDesignation').val()
+                }
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                {"data":"employee", "render":function(data, type, row){
+                    const {photoURL, staffURL, firstName, lastName } = data
+                    return `<img src="${photoURL}"  alt="contact-img" title="contact-img" class="rounded-circle me-2 avatar-sm"> <a href="${staffURL}" class="text-body fw-semibold">${firstName} ${lastName}</a>`
+
+                }},
+                { "data": "job_title" },
+                { "data": "designation" },
+                {"data": "start_date"},
+                {"data": "end_date"},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'designation-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'designation-delete' 0 %}`.replace('0', id)
+
+                    return `
+                           <a href="${updateURL}" title="Edit designation"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                           <a href="${deleteURL}" title="Delete designation"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+        $('#filterJob, #filterDesignation').on('change', function(){
+            table.ajax.reload()
+        })
+
+    });
+</script>
 {% endblock %}

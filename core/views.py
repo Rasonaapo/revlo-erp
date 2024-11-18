@@ -29,11 +29,9 @@ def index(request):
         # Log the user in if authentication is successful
         login(request, user)  
 
-        next_url = request.GET.get('next')
-        if next_url:
-            return redirect(next_url)
-        else:
-            return JsonResponse({'status': 'success', 'message': 'Login successful'}, status=200)
+        next_url = request.POST.get('next') or request.GET.get('next', '/dashboard/')
+ 
+        return JsonResponse({'status': 'success', 'message': 'Login successful', 'redirect_url':next_url}, status=200)
 
 
     return render(request, 'core/login.html')

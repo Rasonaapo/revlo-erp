@@ -1,42 +1,68 @@
 {% extends 'core/base.html' %} 
 {% load static %} 
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
 
+{% endblock %}
+
+{% block scripts %}
+{% comment %} <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script> {% endcomment %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+
+{% endblock %}
 {% block content %} 
-    {% if job_list %}
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
-
+                  <p>
                    <a href="{% url 'job-add' %}">
                     <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
                         <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Job
                     </button>
                    </a>
+                  </p>
 
-                    <table class="table table-hover">
+                  <p>
+                    <div class="row">
+                     <div class="col-md-4">
+                         <label for="filterDepartment" class="text-info">Filter by Department</label>
+                         <select id="filterDepartment" class="form-control select2" data-toggle="select2" data-width="100%">
+                          <option value="">All Departments</option>
+                          {% for dept in departments %}
+                             <option value="{{ dept.id }}"> {{dept.department_name}} </option>
+                          {% endfor %}
+                         </select>    
+                     </div>
+
+                    </div>
+                   </p>
+
+                    <table class="table table-hover" id="Table">
                         <thead>
                           <tr>
                               <th>#</th>
                               <th>Job Title</th>
                               <th>Department</th>
+                              <th width="30%">Skills Reqired</th>
+                              <th>Salary</th>
                               <th>No. Staff</th>
-                              <th>Min Salary</th>
-                              <th>Max Salary</th>
                               <th>Created on</th>
                               <th>Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        {% comment %} <tbody>
                           {% for job in job_list %}
                            <tr>
                               <td>{{ forloop.counter }}</td>
                               <td>{{ job.job_title }}</td>
                               <td>{{ job.department.department_name }}</td>
+                              <td>{{ job.display_required_skills }}</td>
                               <td>{{ job.employee_count|default:'-' }}</td>
-                              <td>{{ job.get_currency_symbol }} {{ job.min_salary|default:'-' }}</td>
-                              <td>{{ job.get_currency_symbol }} {{ job.max_salary|default:'-' }}</td>
-
+                              <td>{{ job.get_currency_symbol }} {{ job.min_salary|default:'-' }} - {{ job.get_currency_symbol }} {{ job.max_salary|default:'-' }}</td>
                               <td>{{ job.created_at|date:'d M, Y'}}</td>
                               <td>
 
@@ -47,15 +73,72 @@
 
                             </tr>
                           {% endfor %}
-                        </tbody>
+                        </tbody> {% endcomment %}
                       </table>
                 </div>
             </div>
         </div>
     </div>
-    {% else %}
-        <div class="alert alert-info" role="alert">
-            <center><i class="mdi mdi-alert-circle-outline me-2"></i> Sorry, it appears there are no job records in the system.  <a href="{% url 'job-add' %}" class="alert-link">Create </a> one by clicking on the link.</center>
-        </div>
-    {% endif %} 
+
+{% endblock %}
+
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+       
+        $('[data-toggle="select2"]').select2()
+
+       var table =  $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'job-list-api' %}",
+                "type": "GET",
+                "data": function(d){
+                    d.filterDepartment=$('#filterDepartment').val()
+                }
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                { "data": "job_title" },
+                { "data": "department" },
+                {"data": "required_skills"},
+                {"data": "min_salary", "render":function(data, type, row){
+                    const { currency, minSalary, maxSalary } = data
+                    return `${currency}${minSalary != null ? minSalary : ''} - ${currency}${maxSalary != null ? maxSalary : ''}`
+                }},
+                {"data": "employee_count"},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'job-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'job-delete' 0 %}`.replace('0', id)
+                 const staffURL =  `{% url 'job-employee' 0 %}`.replace('0', id)
+
+                    return `
+                           <a href="${updateURL}" title="Edit job"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                           <a href="${staffURL}" title="Employees on this job"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-users"></i></button></a>
+
+                           <a href="${deleteURL}" title="Delete job"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+        $('#filterDepartment').on('change', function(){
+            table.ajax.reload()
+        })
+
+    });
+</script>
 {% endblock %}

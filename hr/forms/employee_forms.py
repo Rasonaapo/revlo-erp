@@ -1,6 +1,6 @@
 from typing import Any
 from django import forms
-from ..models.employee import JobHistory, Employee, Guarantor, Document, DocumentType, LeaveRequest, Skill, Meeting, SMS
+from ..models.employee import JobHistory, Employee, Guarantor, Document, DocumentType, LeaveRequest, Skill, Meeting, SMS, Job
 from datetime import date
 from django.core.exceptions import ValidationError
 import re
@@ -10,7 +10,7 @@ from django.forms import modelformset_factory
 class JobHistoryForm(forms.ModelForm):
     class Meta:
         model = JobHistory
-        fields = ['employee', 'start_date', 'end_date', 'job']
+        fields = ['employee', 'start_date', 'end_date', 'job', 'designation']
         widgets = {
             'start_date': forms.DateInput(attrs={'type':'date', 'class':'datepicker'}),
             'end_date': forms.DateInput(attrs={'type':'date', 'class':'datepicker'}),
@@ -70,7 +70,8 @@ class EmployeeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(EmployeeForm, self).__init__(*args, **kwargs)
         self.fields['tin'].required = False
-        self.fields['skills'].queryset = Skill.objects.all().order_by('category', 'name')
+        # self.fields['skills'].queryset = Skill.objects.all().order_by('category', 'name')
+  
 
 class GuarantorForm(forms.ModelForm):
     class Meta:
@@ -204,3 +205,17 @@ class MeetingForm(forms.ModelForm):
         if sms_date.date() < date.today():
             raise forms.ValidationError("SMS date must not be in the past")
         return sms_date
+
+class JobForm(forms.ModelForm):
+    class Meta:
+        model = Job
+        fields = ['job_title', 'department', 'min_salary', 'max_salary', 'currency', 'responsibilities', 'required_skills']  
+        widgets = {
+            'responsibilities':forms.Textarea(attrs={'class': 'quill-editor', 'rows':'4'}),
+            'required_skills':forms.SelectMultiple(attrs={
+                'class': 'form-control select2-multiple', 
+                'data-toggle': 'select2', 
+                'multiple': 'multiple', 
+                'data-placeholder': 'Choose skills...'
+            })
+        }

@@ -8,6 +8,7 @@ from django.utils.text import slugify
 from PIL import Image
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django_quill.fields import QuillField
 
 User = get_user_model()
 
@@ -33,6 +34,20 @@ class NationalIDType(models.Model):
     def __str__(self):
         return self.name
 
+class EmployeeQuerySet(models.QuerySet):
+    def active(self):
+        """Returns only employees with valid active statuses."""
+        valid_statuses = ['active', 'on_leave', 'probation']
+        return self.filter(status__in=valid_statuses)
+
+class EmployeeManager(models.Manager):
+    def get_queryset(self):
+        return EmployeeQuerySet(self.model, using=self._db)
+
+    def active(self):
+        """Shortcut to query only active employees."""
+        return self.get_queryset().active()
+    
 class Employee(models.Model):
     # user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile')
     class Status(models.TextChoices):
@@ -66,7 +81,28 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
-    skills = models.ManyToManyField('Skill', related_name='employees')
+    skills = models.ManyToManyField('Skill', related_name='employees', blank=True)
+    EMPLOYMENT_TYPE = (
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('contractual', 'Contractual'),
+        ('temporary', 'Temporary')
+    )
+    employment_type = models.CharField(max_length=12, choices=EMPLOYMENT_TYPE, default='full_time')
+    designation = models.ForeignKey('Designation', null=True, on_delete=models.SET_NULL, related_name='employees')
+
+    # Custom Manager
+    objects = EmployeeManager()
+    
+    def __str__(self):
+        return f"{self.first_name.capitalize()} {self.last_name.capitalize()}"
+    
+    def missing_skills(self):
+        """Return a set skills required by the job but not possesed by the employee"""
+        job_skills = set(self.job.required_skills.all()) if self.job else set()
+        employee_skills = set(self.skills.all())
+        missing_skills = job_skills - employee_skills
+        return ",".join(skill.name for skill in missing_skills)
 
     def display_employee_skill(self):
         return ",".join(skill.name for skill in self.skills.all())
@@ -89,9 +125,6 @@ class Employee(models.Model):
 
     class Meta:
         unique_together = ('id_type', 'id_number')
-
-    def __str__(self):
-        return f"{self.first_name.capitalize()} {self.last_name.capitalize()}"
     
 
     def get_age(self):
@@ -154,9 +187,10 @@ class Job(models.Model):
     max_salary = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='GHS')
     department = models.ForeignKey(Department, null=True, on_delete=models.CASCADE, related_name='jobs')
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    responsibilities = QuillField(null=True, blank=True)
+    required_skills = models.ManyToManyField('Skill', related_name="required_for_jobs")
 
     def __str__(self):
         return self.job_title
@@ -171,13 +205,16 @@ class Job(models.Model):
             # We will add more currency symbols as needed
         }
         return symbols.get(self.currency, self.currency)  # Default to currency code if symbol not found
-
+    
+    def display_required_skills(self):
+        return ",".join(skill.name for skill in self.required_skills.all())
+    
 class JobHistory(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='job_history')
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='job_history')
-    # department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='job_history')
+    designation = models.ForeignKey('Designation', null=True, blank=True, on_delete=models.CASCADE, related_name='job_history')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -413,3 +450,15 @@ class Skill(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"  # Show skill with category in string representation
 
+class Designation(models.Model):
+    code = models.CharField(max_length=12, null=True, unique=True)
+    title = models.CharField(max_length=100, verbose_name="Title/Rank", unique=True)
+    level = models.CharField(max_length=100, null=True, verbose_name="Hierarchy Level")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.level})"
+
+    class Meta:
+        unique_together = ('title', 'level')

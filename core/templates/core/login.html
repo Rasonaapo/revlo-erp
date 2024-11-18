@@ -89,6 +89,8 @@
                 <form action="" method="POST" id="login-form">
                   {% csrf_token %}
 
+                  <input type="hidden" name="next" value="{{ request.GET.next }}">
+
                   <div class="mb-3">
                     <label for="emailaddress" class="form-label"
                       >Email address</label
@@ -232,7 +234,7 @@
             },
             // on success
             success: function (response) {
-              const { message, status } = response;
+              const { message, status, redirect_url } = response;
 
               if (status == "fail") {
                 console.log(message);
@@ -253,19 +255,11 @@
                       t.addEventListener("mouseleave", Swal.resumeTimer);
                   },
                 }).fire({ icon: "success", title: msg });
-                let redirectURI = "{% url 'dashboard' %}";
-                {% comment %} if ($.isNumeric(message)) {
-                  redirectURI = "{% url 'event-detail' 0 %}".replace(
-                    "0",
-                    message
-                  );
-                } else if (message == "disclaimer") {
-                  redirectURI = "{% url 'disclaimer' %}";
-                } {% endcomment %}
+
                 setTimeout(function () {
                   // clear form & close modal, after that load Positions..
-                  location.href = redirectURI;
-                }, 3e3);
+                  location.href = redirect_url;
+                }, 3000);
                 // $('#save-btn').html('Save Record').removeAttr('disabled')
               }
             },

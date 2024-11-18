@@ -1,0 +1,261 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/flatpickr/flatpickr.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/multiselect/css/multi-select.css' %}" rel="stylesheet" type="text/css" />
+
+<style>
+    .select2-selection__choice{
+        background-color: #03030c;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+<script src="{% static 'plugin/libs/flatpickr/flatpickr.min.js' %}"></script>
+<script src="{% static 'plugin/libs/multiselect/js/jquery.multi-select.js' %}"></script>
+
+{% endblock %}
+
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+ <div class="row">
+    <div class="col-lg-1"></div>
+    <div class="col-lg-10">
+      <form action="" method="POST">
+        {% csrf_token %}
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-4">
+                        {{ form.item_name|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-3">
+                        {{ form.alias_name|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-3">
+                        {{ form.expires_on|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-2">
+                        {{ form.effect|as_crispy_field }}
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-4">
+                        {{ form.rate_type|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-3">
+                        {{ form.rate_amount|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-3" id="rate-option">
+                        {{ form.rate_dependency|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-2">
+                        {{ form.condition|as_crispy_field }}
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-6">
+                        {{ form.salary_grade|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-6">
+                        {{ form.step|as_crispy_field }}
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-6">
+                        {{ form.job|as_crispy_field }}
+                    </div>
+                    <div class="col-lg-6">
+                        {{ form.designation|as_crispy_field }}
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-12">
+                        {{ form.department|as_crispy_field }}
+                    </div>
+                </div>
+                <p>
+                    <h5>Note the ff:</h5>
+                    <ul>
+                        <li><b>Mutual Exclusivity:</b> You cannot select both "Applicable To" and "Excluded From" at the same time. Choose only one of these options</li>
+
+                        <li>
+                            <b>Filter Dependency:</b> When "Applicable To" is selected, all additional filters (Departments, Designations, Salary Grades, Steps, and Service Condition) are not necessary and will be disregarded.
+
+                        </li>
+                    </ul>
+                </p>
+                <div class="row mt-2">
+                    <div class="col-lg-12">
+                        {{ form.applicable_to|as_crispy_field }}
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-12">
+                        {{ form.excluded_from|as_crispy_field }}
+                    </div>
+                </div>
+
+                <p class="mt-2">
+                    <a href="{% url 'salaryitem-list' %}">
+                        <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                    </a>
+                    <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                </p>     
+
+
+            </div>
+        </div>
+      </form>
+    </div>
+ </div>
+
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        $('.select, .selectmultiple').select2();
+        $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+        
+        /*
+        // Store salary items in a variable to avoid multiple requests
+        let salaryItems = [];
+        const initialRateType = "{{ rate_type|safe }}";
+        const initialRateDependency = "{{ rate_dependency|safe }}";
+        
+        // Preload salary items once on page load
+        getSalaryItems().then(() => {
+            // Initial rendering of rate_dependency field based on rate type
+            renderRateDependency(initialRateType, initialRateDependency);
+        });
+
+        // Function to render the rate_dependency field
+        function renderRateDependency(rateType, rateDependency) {
+            if (rateType === 'factor') {
+                // If rate_type is 'factor', render a select box using preloaded salary items
+                populateSelectField(rateDependency);
+            } else {
+                // If rate_type is not 'factor', render a text input for 'Basic'
+                $('#rate-option').html(`
+                    <label for="id_rate_dependency">Rate Dependency</label>
+                    <input type="text" name="rate_dependency" id="id_rate_dependency" class="form-control" placeholder="Eg. Number of Hours" value="${rateDependency}">
+                `);
+            }
+        }
+
+        // Function to populate select field with preloaded salary items
+        function populateSelectField(selectedDependency) {
+            let selectOptions = '<option value="Basic">Basic</option>';
+            salaryItems.forEach(function(item) {
+                const selected = item.id == selectedDependency ? "selected" : "";
+                selectOptions += `<option value="${item.id}" ${selected}>${item.name}</option>`;
+            });
+            
+            $('#rate-option').html(`
+                <label for="id_rate_dependency">Percent Of (Select item or BASIC)</label>
+                <select name="rate_dependency" id="id_rate_dependency" class="form-control select">${selectOptions}</select>
+            `);
+            $('.select').select2();  // Reinitialize select2 on the new select element
+        }
+
+        // Function to load salary items once on page load
+        async function getSalaryItems(){
+            try {
+                const url = "{% url 'load-salary-items' %}";
+                const response = await fetch(url);
+                const data = await response.json();
+                salaryItems = data.map(item => ({ id: item.id, name: item.name }));  // Store in global variable
+            } catch (error) {
+                console.error("Failed to load salary items:", error);
+            }
+        }
+
+        // Event listener for rate type change
+        $('#id_rate_type').change(function() {
+            const selectedRateType = $(this).val();
+            renderRateDependency(selectedRateType, '');  // Clear dependency selection on rate type change
+        });
+        
+        */
+
+        
+        const rateType = "{{ rate_type|safe }}"
+        let rateDependency = "{{ rate_dependency|safe }}"
+        if(rateDependency == 'None') rateDependency = ''
+        console.log(`${rateType} ${rateDependency}`)
+
+        const rateDependencyTextFieldHTML = `{% filter escapejs %}{{ form.rate_dependency|as_crispy_field|safe }}{% endfilter %}`;
+        let factorSelectFieldHTML = 
+                                     `<label for="id_rate_dependency">Percent Of(Select item or) BASIC</label>
+                                        <select name="rate_dependency" required id="id_rate_dependency" class="form-control select">
+                                            <option value=""> -- choose factor --</option>
+                                            0
+                                        </select>
+                                     `
+       // console.log("Rate Dependency Field HTML:", rateDependencyFieldHTML);
+        
+        async function getSalaryItems(){
+            try{
+                const url = "{% url 'load-salary-items' %}"
+                const response = await fetch(url)
+                const data = await response.json()
+                let selectItems = '';
+                data.forEach(item => {
+                    const {id, name } = item 
+                    selectItems += `<option value="${id}" ${rateDependency == id ? "selected" : ""}>${name}</option>`
+                })
+                console.log(selectItems)
+                factorSelectFieldHTML = factorSelectFieldHTML.replace('0', selectItems)
+
+                // set the correct html field on page refresh either validation or update..
+                if(rateType){
+                    toggleRateType(rateType, rateDependency)
+                }
+            }catch(e){
+                console.error(e)
+            }
+        }
+
+        getSalaryItems()
+
+
+        // Ensure the correct form field is displayed after page refresh during validatoin
+        function toggleRateType(rateType, rateDependency){
+            if(rateType == 'factor'){
+                $('#rate-option').html(factorSelectFieldHTML)
+                $('.select').select2()
+            }else{
+                $('#rate-option').html(rateDependencyTextFieldHTML)
+            }
+            (rateDependency != '' || rateDependency != null) && $('#id_rate_dependency').val(rateDependency)
+        }
+
+  
+
+        // on form creation..
+
+        $('#id_rate_type').change(function(){
+            toggleRateType($(this).val(), '')
+        })
+    
+
+    })
+</script>
+{% endblock %}
+
+

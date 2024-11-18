@@ -43,7 +43,7 @@
         <div class="card">
             <div class="card-body">
 
-                {% if meeting.status == 'on_going' || meeting.status == 'ended' %}
+                {% if meeting.status == 'on_going' or meeting.status == 'ended' %}
                     <a href="{% url 'attendance-update' meeting.id %}" title="Update meeting attendance"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-user-check"></i></button></a>
                 {% endif %}
 

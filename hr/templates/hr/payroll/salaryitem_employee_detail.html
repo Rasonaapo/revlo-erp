@@ -1,0 +1,103 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-5 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+                {% comment %} {% if sms.status == 'pending' %} {% endcomment %}
+                     <a href="{% url 'salaryitem-update' salary_item.id %}" title="Edit salary item"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                     <a href="{% url 'salaryitem-list' %}" title="View salary item"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                     
+                {% comment %} {% endif %} {% endcomment %}
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Salary Item Information</h5>
+
+                <p class="text-muted mb-2 font-13"><strong>Description :</strong> <span class="ms-2">{{ salary_item.item_name }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Payslip Description :</strong> <span class="ms-2">{{ salary_item.alias_name }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Entry :</strong> <span class="ms-2">{{ salary_item.get_effect_display }} </span></p>
+               
+                <p class="text-muted mb-2 font-13"><strong>Condition :</strong> <span class="ms-2">{{ salary_item.get_condition_display }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Rate Type :</strong> <span class="ms-2">{{ salary_item.get_rate_type_display }} </span></p>
+
+                <p class="text-muted mb-2 font-13">
+                    <strong> Rate :</strong> 
+                    
+                    <span class="ms-2">
+                        {% if salary_item.rate_type == 'factor' %}  
+                             {{ salary_item.rate_amount|floatformat:0 }}% On {{ dependency }}
+                        {% elif salary_item.rate_type == 'variable' %}
+                            {{ salary_item.rate_amount }} rate By {{ salary_item.rate_dependency }}
+                        {% else %}
+                            {{ salary_item.rate_amount }} fixed rate
+                        {% endif %}
+                    </span>
+                </p>
+
+                <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ salary_item.created_at|date:'d M, Y h:i A' }} </span></p>       
+
+                <p class="text-muted mb-2 font-13"><strong>Expiry Status :</strong> <span class="ms-2">{{ salary_item.expires_on|date:'d M, Y'|default:'Active' }} </span></p>       
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Employee Filters (Dept/Job/Grade etc)</h5>
+ 
+                <p class="text-muted mb-2 font-13"><strong>Step :</strong> <span class="ms-2">{{ salary_item.display_salary_item_step|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Grade :</strong> <span class="ms-2">{{ salary_item.display_salary_item_grade|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Job :</strong> <span class="ms-2">{{ salary_item.display_salary_item_job|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Department :</strong> <span class="ms-2">{{ salary_item.display_salary_item_department|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Designation :</strong> <span class="ms-2">{{ salary_item.display_salary_item_designation|default:'N/A' }} </span></p>                
+                
+                <p class="text-muted mb-2 font-13"><strong>Applicable To :</strong> <span class="ms-2">{{ salary_item.display_salary_item_applicable_to|default:'N/A' }} </span></p>
+
+                <p class="text-muted mb-2 font-13"><strong>Excluded From :</strong> <span class="ms-2">{{ salary_item.display_salary_item_excluded_from|default:'N/A' }} </span></p>
+
+
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-7 col-xl-7">
+        <div class="card">
+            <div class="card-body">
+
+  
+                {% if salary_item.rate_type == "variable" %}
+                    <a href="{% url 'salaryitem-variable' salary_item.id %}" title="set salary item employees variable"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-user-plus"></i></button></a>
+                {% endif %}
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i>  Affected Employees</h5>
+
+                <div class="inbox-widget" data-simplebar style="max-height: 407px;">
+                    {% for item in employees %}
+                    <div class="inbox-item">
+                        <div class="inbox-item-img"><img src="{{ item.employee.photo.url }}" class="rounded-circle" alt=""></div>
+                        <p class="inbox-item-author">{{ item.employee.first_name }} {{ item.employee.last_name }}</p>
+                        <p class="inbox-item-text">
+                            {% if salary_item.rate_type == 'variable' and item.variable is not None %}
+                                {{ salary_item.rate_dependency }} [{{ item.variable }}]
+                            {% else %} 
+                                 
+                            {% endif %}
+                        </p>
+                        <p class="inbox-item-date">
+                            <a href="javascript:(0);" class="btn btn-sm btn-link text-info font-13"> {{ item.amount }}</a>
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div> <!-- end inbox-widget -->
+
+            </div>
+
+        </div>       
+    </div>
+</div>
+{% endblock %}

@@ -43,11 +43,11 @@
                 </div>
 
                 <div class="col-md-2">
-                    <label for="filterJob" class="text-info">Filter by Job</label>
-                    <select id="filterJob" class="form-control select2" data-toggle="select2" data-width="100%">
-                        <option value="">All Jobs</option>
-                        {% for job in job_list %}
-                        <option value="{{ job.id }}"> {{job.job_title}} </option>
+                    <label for="filterDesignation" class="text-info">Filter by Designation</label>
+                    <select id="filterDesignation" class="form-control select2" data-toggle="select2" data-width="100%">
+                        <option value="">All Designations</option>
+                        {% for designation in designation_list %}
+                        <option value="{{ designation.id }}"> {{designation.title}} </option>
                         {% endfor %}
                     </select>    
                 </div>
@@ -105,7 +105,7 @@
                           <th>Status</th>
                           <th>Age</th>
                           <th>Phone</th>
-                          <th>Job</th>
+                          <th>Designation</th>
                           <th>Hire Date</th>
                           <th>Grade</th>
                           <th>Created on</th>
@@ -134,7 +134,7 @@
                 "data":function(d){
                     d.status=$('#filterStatus').val(),
                     d.bank=$('#filterBank').val(),
-                    d.job=$('#filterJob').val(),
+                    d.designation=$('#filterDesignation').val(),
                     d.department=$('#filterDepartment').val(),
                     d.id=$('#filterID').val(),
                     d.grade=$('#filterGrade').val()
@@ -146,7 +146,7 @@
                     "orderable": false,
                     "searchable": false,
                     "render": function (data, type, row, meta) {
-                        return meta.row + 1; // Serial number, starts from 1
+                        return meta.row + meta.settings._iDisplayStart + 1;
                     }
                 },
                 {"data":"first_name", "orderable":false, "render":function(data, type, row){
@@ -160,7 +160,7 @@
                 }},
                 { "data": "dob", 'type':'num' }, 
                 { "data": "phone_number" },
-                { "data": "job" },
+                { "data": "designation" },
                 { "data": "hire_date" },
                 { "data": "salary_grade" },
                 { "data": "created_at" },
@@ -182,7 +182,7 @@
             "order": [[9, "desc"]]  // Default sorting by "created_at"
         });
 
-        $('#filterStatus, #filterBank, #filterDepartment, #filterGrade, #filterID, #filterJob').on('change', function(){
+        $('#filterStatus, #filterBank, #filterDepartment, #filterGrade, #filterID, #filterDesignation').on('change', function(){
             table.ajax.reload()
 
         })

@@ -1,0 +1,119 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-5 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+                {% if item == "department" %}
+
+                    <a href="{% url 'department-update' department.id %}" title="Edit {{ item }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'department-list' %}" title="View {{ item }}"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Department Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Description :</strong> <span class="ms-2">{{ department.department_name }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Manager/HoD :</strong> <span class="ms-2">{{ department.manager.first_name }} {{ department.manager.last_name}} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ department.created_at|date:'d M, Y h:i A' }} </span></p>       
+
+                {% elif item == 'designation' %}
+                    <a href="{% url 'designation-update' designation.id %}" title="Edit {{ item }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'designation-list' %}" title="View {{ item }}"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Designation Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Title :</strong> <span class="ms-2">{{ designation.title }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Code :</strong> <span class="ms-2">{{ designation.code}} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ designation.created_at|date:'d M, Y h:i A' }} </span></p>  
+                {% elif item == "job" %}
+
+                    <a href="{% url 'job-update' job.id %}" title="Edit {{ item }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'job-list' %}" title="View {{ item }}"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Job Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Job Title :</strong> <span class="ms-2">{{ job.job_title }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Department :</strong> <span class="ms-2">{{ job.department.department_name}} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Required Skills :</strong> <span class="ms-2">{{ job.display_required_skills }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Responsibilities :</strong> <span class="ms-2">{{ job.responsibilities.html|safe }} </span></p>
+                    
+
+                    <p class="text-muted mb-2 font-13"><strong>Salary Range :</strong> <span class="ms-2">{{ job.get_currency_symbol }}{{ job.min_salary }} - {{ job.get_currency_symbol }}{{ job.max_salary }} </span></p>
+                   
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ job.created_at|date:'d M, Y h:i A' }} </span></p>  
+
+                {% elif item == "salary_grade" %}
+                    <a href="{% url 'salarygrade-update' salary_grade.id %}" title="Edit salary grade"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'salarygrade-list' %}" title="View salary grades"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Salary Grade Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Grade :</strong> <span class="ms-2">{{ salary_grade.grade }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Step :</strong> <span class="ms-2">{{ salary_grade.grade_step.step }} </span></p>
+                    
+
+                    <p class="text-muted mb-2 font-13"><strong>Basic Salary :</strong> <span class="ms-2">{{ salary_grade.get_currency_symbol }}{{ salary_grade.amount }} </span></p>
+                
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ salary_grade.created_at|date:'d M, Y h:i A' }} </span></p>          
+                {% endif %}
+
+
+
+               
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-7 col-xl-7">
+        <div class="card">
+            <div class="card-body">
+
+  
+                {% if salary_item.rate_type == "variable" %}
+                    <a href="{% url 'salaryitem-variable' salary_item.id %}" title="set salary item employees variable"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-user-plus"></i></button></a>
+                {% endif %}
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i>  Number of  Employees</h5>
+
+                <div class="inbox-widget" data-simplebar style="max-height: 407px;">
+                    {% for employee in employees %}
+                    <div class="inbox-item">
+                        <div class="inbox-item-img"><img src="{{ employee.photo.url }}" class="rounded-circle" alt=""></div>
+                        <p class="inbox-item-author">{{ employee.first_name }} {{ employee.last_name }}</p>
+                        {% comment %} <p class="inbox-item-text">
+                            {% if salary_item.rate_type == 'variable' and item.variable is not None %}
+                                {{ salary_item.rate_dependency }} [{{ item.variable }}]
+                            {% else %} 
+                                 
+                            {% endif %}
+                        </p>
+                        <p class="inbox-item-date">
+                            <a href="javascript:(0);" class="btn btn-sm btn-link text-info font-13"> {{ item.amount }}</a>
+                        </p> {% endcomment %}
+                    </div>
+                    {% endfor %}
+                </div> <!-- end inbox-widget -->
+
+            </div>
+
+        </div>       
+    </div>
+</div>
+{% endblock %}

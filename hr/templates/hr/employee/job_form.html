@@ -1,6 +1,25 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/multiselect/css/multi-select.css' %}" rel="stylesheet" type="text/css" />
+
+{% comment %} <link href="{% static 'plugin/libs/quill/quill.core.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/quill/quill.bubble.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/quill/quill.snow.css' %}" rel="stylesheet" type="text/css" /> {% endcomment %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/multiselect/js/jquery.multi-select.js' %}"></script>
+{% comment %} <script src="{% static 'plugin/libs/quill/quill.min.js' %}"></script> {% endcomment %}
+
+
+{% endblock %}
+
 {% block content %}
 {% load widget_tweaks %}
 <!-- {% load crispy_forms_tags %} -->
@@ -12,7 +31,55 @@
             <div class="card-body">
                 <form action="" method="POST" id="save-form" novalidate>
                     {% csrf_token %}
-                    {{ form|crispy }}        
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{ form.job_title|as_crispy_field }}
+                        </div>
+                    </div>     
+
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{ form.department|as_crispy_field }}
+                        </div>
+                    </div>   
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.currency|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-4 mb-2">
+                            {{ form.min_salary|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            {{ form.max_salary|as_crispy_field }}
+                        </div>
+                    </div>   
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{ form.responsibilities|as_crispy_field }}
+                        </div>
+                    </div> 
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <div class="form-group">
+                                <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
+                                <select class="form-control select2-multiple" data-toggle="select2" multiple="multiple" id="{{ form.skills.id_for_label }}" name="{{ form.skills.name }}" data-placeholder="Choose skills...">
+                                    {% for category, skills in categorized_skills.items %}
+                                    <optgroup label="{{ category|title }}">
+                                        {% for skill in skills %}
+                                        <option value="{{ skill.id }}" {% if skill.id in form.skills.value %}selected{% endif %}>
+                                            {{ skill.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
                     <p class="mt-2">
                         <a href="{% url 'job-list' %}">
@@ -27,4 +94,15 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $('document').ready(function(){
+
+        $('.select2-multiple, .select').select2();
+        
+
+    });
+</script> 
 {% endblock %}
