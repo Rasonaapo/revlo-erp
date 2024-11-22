@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.utils.timezone import now
-from datetime import timedelta
+from datetime import timedelta, date
 
 class SalaryGrade(models.Model):
     CURRENCY_CHOICES = [
@@ -257,7 +257,7 @@ class Loan(models.Model):
     outstanding_balance = models.DecimalField(max_digits=12, decimal_places=2, editable=False, verbose_name="Outstanding Balance", default=Decimal('0.00'))
     status = models.CharField(max_length=10, choices=LoanStatus.choices, default=LoanStatus.PENDING, verbose_name="Loan Status")
     purpose = models.TextField(null=True, blank=True, verbose_name="Loan Purpose")
-    applied_on = models.DateField(auto_now_add=True, verbose_name="Applied On")
+    applied_on = models.DateField(verbose_name="Applied On")
     approved_on = models.DateField(null=True, blank=True, verbose_name="Approved On")
     deduction_end_date = models.DateField(null=True, blank=True, verbose_name="Deduction End Date")
 
@@ -270,7 +270,28 @@ class Loan(models.Model):
             raise ValidationError("Salary Advances must have an interest rate of 0.00%")
 
     def __str__(self):
-        return f"{self.loan_type} - {self.employee.first_name} {self.employee.last_name} ({self.status})"
+        return f"{self.get_loan_type_display()} - {self.employee.first_name} {self.employee.last_name} ({self.get_status_display()})"
+
+    # Create series of themes based on status of loan
+    def get_status_theme(self):
+            theme = 'info'
+            status = self.status 
+
+            if status == 'active': 
+                theme = 'success'
+            elif status == 'rejected':
+                theme = 'dark'
+            elif status == 'approved':
+                theme = 'warning'
+            elif status == 'paid_off':
+                theme = 'primary'
+            # elif status == 'pending':
+            #     theme = 'info'
+            elif status == 'defaulted':
+                theme = 'danger label-table'
+            
+            return theme
+            
 
     def calculate_installments(self):
         """
@@ -288,8 +309,9 @@ class Loan(models.Model):
         """
         Automatically updates the loan status based on conditions.
         """
-        if self.status == self.LoanStatus.APPROVED and self.outstanding_balance > 0:
-            self.status = self.LoanStatus.ACTIVE
+        # if self.status == self.LoanStatus.APPROVED and self.outstanding_balance > 0:
+        #     self.status = self.LoanStatus.ACTIVE
+        # status will be set to Active when PV is finally created and paid to staff
 
         if self.deduction_end_date and now().date() > self.deduction_end_date and self.outstanding_balance > 0:
             self.status = self.LoanStatus.DEFAULTED
@@ -311,15 +333,17 @@ class Loan(models.Model):
             self.approved_on = None
             self.deduction_end_date = None
 
+
+        # Ensure outstanding_balance is initialized for new loans
+        # if not self.pk:  # New Loan
+        total_repayable_amount = self.monthly_installment * self.duration_in_months
+        self.outstanding_balance = total_repayable_amount
+        self.total_repayable_amount = total_repayable_amount
+
         # Update loan status
         self.update_status()
 
-        # Ensure outstanding_balance is initialized for new loans
-        if not self.pk:  # New Loan
-            self.outstanding_balance = self.total_repayable_amount
-
         super().save(*args, **kwargs)
-
 
 
 class LoanRepayment(models.Model):
@@ -327,6 +351,8 @@ class LoanRepayment(models.Model):
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Amount Paid")
     date_paid = models.DateField(default=now, verbose_name="Date Paid")
     payment_reference = models.CharField(max_length=100, null=True, blank=True, verbose_name="Payment Reference")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)  
 
     def save(self, *args, **kwargs):
         # Update loan's outstanding balance
@@ -334,7 +360,90 @@ class LoanRepayment(models.Model):
         # Update loan's status
         self.loan.update_status()
         self.loan.save()
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Repayment of {self.amount_paid} for Loan #{self.loan.id} on {self.date_paid}"
+
+class CreditUnion(models.Model):
+    union_name = models.CharField(max_length=150, unique=True, verbose_name="Credit Union Description", help_text="Union can be welfare group, bank etc")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Amount (Default)", help_text="If entered, will be the default for all staff in this union, leave it blank for varying amount")
+    all_employee = models.BooleanField(default=False, verbose_name="Include All Staff")
+    department = models.ManyToManyField('hr.Department', related_name="credit_unions", blank=True)
+    applicable_to = models.ManyToManyField('hr.Employee', verbose_name="Applicable To", related_name='applicable_credit_unions', blank=True)
+    excluded_from = models.ManyToManyField('hr.Employee', related_name="excluded_credit_unions", verbose_name="Excluded From", blank=True)
+    deduction_start_date = models.DateField(null=True, blank=True, verbose_name="Deduction Start Date", help_text="Default date where deduction will commmence for all employees")
+    deduction_end_date = models.DateField(null=True, blank=True, verbose_name="Deduction End Date", help_text="When omitted, deduction will continue indefinitely")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True) 
+
+    def __str__(self):
+        return self.union_name
+    
+    def display_credit_union_department(self):
+        return ",".join([department.department_name  for department in self.department.all()])
+
+    def display_credit_union_applicable_to(self):
+        return ",".join([f"{employee.first_name} {employee.last_name}"  for employee in self.applicable_to.all()])
+
+    def display_credit_union_excluded_from(self):
+        return ",".join([f"{employee.first_name} {employee.last_name}"  for employee in self.excluded_from.all()])
+  
+
+    def clean(self):
+        super().clean()
+
+        # Ensure that start date and end date aren't the same if only they're supplied
+        if self.deduction_start_date and self.deduction_end_date:
+            if self.deduction_start_date >= self.deduction_end_date:
+                raise ValidationError("Start date must be earlier than the end date")
+        elif self.deduction_end_date and not self.deduction_start_date: 
+            # raise error for situation where end date is supplied without start date
+                raise ValidationError("Start date must be set if an end date is specified.")
+        elif self.deduction_start_date and self.deduction_start_date < date.today():
+            raise ValidationError("Start date can not be in the past")
+
+    def get_eligible_employees(self):
+        from hr.models.employee import Employee
+        # Get all active employee when all_employee is checked
+        eligiblie_employees = Employee.objects.active()
+       
+       # if all_employee is checked, return all but exclude staff that may be excluded
+        if self.all_employee:
+            if self.excluded_from.exists():
+                eligiblie_employees = eligiblie_employees.exclude(id__in=self.excluded_from.values_list('id', flat=True))
+            return eligiblie_employees
+        
+        # Apply other filters 
+        if self.applicable_to.exists():
+            eligiblie_employees = self.applicable_to.all()
+        if self.department.exists():
+            eligiblie_employees = eligiblie_employees.filter(job__department__in=self.department.all())
+        if self.excluded_from.exists():
+            eligiblie_employees = eligiblie_employees.exclude(id__in=self.excluded_from.values_list('id', flat=True))
+        
+        return eligiblie_employees
+
+
+class StaffCreditUnion(models.Model):
+    employee = models.ForeignKey('hr.Employee', on_delete=models.CASCADE, related_name='staff_credit_unions')
+    credit_union = models.ForeignKey('CreditUnion', on_delete=models.CASCADE, verbose_name='Credit Union', related_name="staff_credit_unions")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monthly Deduction")
+    deduction_start_date = models.DateField(null=True, blank=True, verbose_name="Deduction Start Date", help_text="Until date is entered, deduction won't take place")
+    deduction_end_date = models.DateField(null=True, blank=True, verbose_name="Deduction Start Date", help_text="When omitted, deduction will continue indefinitely.")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True) 
+
+    def __str__(self):
+        return f"{self.employee} - {self.credit_union}"
+
+    def clean(self):
+        super().clean()
+        if self.amount < 0:
+            raise ValidationError("The deduction amount must be greater than 0.")
+        if self.deduction_start_date and self.deduction_end_date:
+            if self.deduction_start_date >= self.deduction_end_date:
+                raise ValidationError("Deduction start date must be earlier than the end date.")

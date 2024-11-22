@@ -1,8 +1,8 @@
 {% extends 'core/base.html' %} 
 {% load static %} 
 
-
 {% block styles %}
+<link href="{% static 'plugin/libs/flatpickr/flatpickr.min.css' %}" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
 
 {% endblock %}
@@ -12,82 +12,93 @@
 <script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
 {% endblock %}
 
-{% block content %}
-{% load widget_tweaks %}
-{% load crispy_forms_tags %}
 
+
+{% block content %}
 <div class="row">
-    <div class="col-lg-2"></div>
-    <div class="col-lg-8">
+    <div class="col-lg-1"></div>
+    <div class="col-lg-10">
         <div class="card">
             <div class="card-body">
-              <form action="" method="POST" id="save-form" novalidate>
+              <form action="" id="save-form" method="POST" >
                 {% csrf_token %}
-                {{ form|crispy }}
-                
                 <table class="table table-hover" id="table">
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Employee</th>
-                            <th>Last Updated</th>
-                            <th>Check In Time</th>
+                            <th>Staff ID</th>
+                            <th>Staff Name</th>
+                            <th>Amount</th>
+                            <th>Ded. Start Date</th>
+                            <th>Ded. End Date</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for attendance in attendances %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ attendance.employee.first_name  }} {{ attendance.employee.last_name}}</td>
-                            <td>{{ attendance.updated_at|date:'d M, Y h:i A'}}</td>
+                        {% for data in staff_credit_unions %}
+                         <tr>
+                            <th>{{ forloop.counter }}</th>
+                            <td>{{ data.employee.employee_id  }}</td>
+                            <td>{{ data.employee.first_name }} {{ data.employee.last_name }}</td>
                             <td>
-                                <input type="time" 
-                                       class="form-control timepicker" 
-                                       name="check_in_time_{{ attendance.id }}" 
-                                       value="{{ attendance.check_in_time|date:'H:i'|default:'' }}" 
-                            /></td>
-                        </tr>
+                                <input type="number" class="form-control amount" name="amount[]" value="{{ data.amount }}" />
+                            </td>
+
+                            <td>
+                                <input type="text" class="form-control dateinput" name="start-date[]" value="{{ data.deduction_start_date|date:'Y-m-d'|default:'' }}" />
+                            </td>
+
+                            <td>
+                                <input type="text" class="form-control dateinput" name="end-date[]" value="{{ data.deduction_end_date|date:'Y-m-d'|default:'' }}" />
+                                
+                                <input type="hidden" class="form-control" name="id[]" value="{{ data.id }}" />
+
+
+                            </td>
+                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr>
-                            <th colspan="2">
-                                <a href="{% url 'meeting-list' %}">
+                            <td colspan='3'>
+                                <a href="{% url 'creditunion-list' %}">
                                     <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
-                                </a>
-                            </th>
-                            <th colspan="2">
-
+                                  </a>
+                            </td>
+                            <td colspan='2'></td>
+                            <td>
+                                
                                 <button type="submit" id="save-btn" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>        
-                            </th>
+
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
-                </form>
+               </form>
             </div>
         </div>
     </div>
 </div>
-
-{% endblock %} 
+{% endblock %}
 
 {% block javascript %}
 <script>
- $(document).ready(function(){
-      
-            // initialize datatable on table to enable search for employee
+    $(document).ready(function(){
+        
+        $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+
+        // initialize datatable on table to enable search for employee
         $('#table').DataTable({
             paging: false,        // We disable pagination
             searching: true,     
             ordering: true,     
             info: true,          
             columnDefs: [
-                { orderable: false, targets: [3] }, // Disable sorting for input columns
+                { orderable: false, targets: [3, 4, 5] }, // Disable sorting for input columns
             ],
             language: {
                 search: "Search Staff:", 
             },
-        }); 
+        });        
 
         $('#save-form').submit(function (event) {
              // create an AJAX call
@@ -127,13 +138,16 @@
                                 // clear form & close modal, after that load Positions..
 
                                 $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Save Record`).removeAttr('disabled')
-                                location.href = "{% url 'meeting-list' %}"
+                                const unionId = "{{ credit_union.id }}"
+                                location.href = "{% url 'creditunion-detail' 0 %}".replace('0', unionId)
 
                             }, 3e3)
                         }
                     },
                     // on error
                     error: function (request, status, error) {
+                        console.log(`${request} ${status} ${error}`)
+                        console.log(request)
                         // alert the error if any error occured
                         $('#save-btn').html('<i class="fe-check-circle me-1"></i> Save Record').removeAttr('disabled')
 
@@ -144,11 +158,12 @@
                                 console.log(request.responseJSON.errors)
 
                                 let data = request.responseJSON.errors
+                                console.log(`data: ${data}`)
 
                                 $.each(data, function(index, item){
                                     console.log(index)
                                     console.log(item)
-                                    errorText += '<li>'+ '<b>' + index +'</b> - '+ item[0] + '</li>'
+                                    errorText += '<li> '+ item + '</li>'
                                 })
                                 errorText += '</ul>'
                                 Swal.fire({
@@ -161,7 +176,7 @@
                 });
                 return false;
             }); 
+     
     })
 </script>
-
 {% endblock %}

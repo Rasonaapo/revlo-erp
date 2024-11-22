@@ -1,6 +1,6 @@
 {% extends 'core/base.html' %}
 {% load static %}
-
+{% load humanize %}
 {% block content %}
 <div class="row">
     <div class="col-lg-5 col-xl-5">
@@ -39,7 +39,6 @@
                     <a href="{% url 'job-update' job.id %}" title="Edit {{ item }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
 
                     <a href="{% url 'job-list' %}" title="View {{ item }}"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
-
                     
                     <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Job Information</h5>
 
@@ -57,26 +56,54 @@
                     <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ job.created_at|date:'d M, Y h:i A' }} </span></p>  
 
                 {% elif item == "salary_grade" %}
-                    <a href="{% url 'salarygrade-update' salary_grade.id %}" title="Edit salary grade"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                    <a href="{% url 'salarygrade-update' salary_grade.id %}" title="Edit {{ salary_grade }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
 
                     <a href="{% url 'salarygrade-list' %}" title="View salary grades"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
 
-                    
                     <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Salary Grade Information</h5>
 
                     <p class="text-muted mb-2 font-13"><strong>Grade :</strong> <span class="ms-2">{{ salary_grade.grade }} </span></p>
 
                     <p class="text-muted mb-2 font-13"><strong>Step :</strong> <span class="ms-2">{{ salary_grade.grade_step.step }} </span></p>
                     
-
                     <p class="text-muted mb-2 font-13"><strong>Basic Salary :</strong> <span class="ms-2">{{ salary_grade.get_currency_symbol }}{{ salary_grade.amount }} </span></p>
                 
                     <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ salary_grade.created_at|date:'d M, Y h:i A' }} </span></p>          
-                {% endif %}
+                {% elif item == "credit_union" %}
+                    <a href="{% url 'creditunion-update' credit_union.id %}" title="Edit {{ credit_union }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
 
+                    <a href="{% url 'creditunion-list' %}" title="View credit unions"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
 
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Credit Union Information</h5>
 
-               
+                    <p class="text-muted mb-2 font-13"><strong>Description :</strong> <span class="ms-2">{{ credit_union.union_name }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Default Amount :</strong> <span class="ms-2">{{ credit_union.amount|intcomma }} </span></p>
+                    
+                    <p class="text-muted mb-2 font-13"><strong>Default Deduction Start Date :</strong> <span class="ms-2">{{ credit_union.deduction_start_date|date:"d M, Y"|default:"-" }}  </span></p>
+  
+                    <p class="text-muted mb-2 font-13"><strong>Default Deduction End Date :</strong> <span class="ms-2">{{ credit_union.deduction_end_date|date:"d M, Y"|default:"-" }}  </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ credit_union.created_at|date:'d M, Y h:i A' }} </span></p>          
+            
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Credit Union Filters (Dept/Applicable To/Exclusion etc)</h5>
+ 
+                    <p class="text-muted mb-2 font-13"><strong>Is All Staff :</strong> <span class="ms-2"> 
+                        {% if not credit_union.all_employee %}
+                            <span class='badge bg-danger'>No</span>
+                        {% else %}
+                            <span class='badge bg-success'>Yes</span>
+                        {% endif %}
+                     </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Department :</strong> <span class="ms-2">{{ credit_union.display_credit_union_department|default:'N/A' }} </span></p>
+ 
+                    <p class="text-muted mb-2 font-13"><strong>Applicable To :</strong> <span class="ms-2">{{ credit_union.display_credit_union_applicable_to|default:'N/A' }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Excluded From :</strong> <span class="ms-2">{{ credit_union.display_credit_union_excluded_from|default:'N/A' }} </span></p>
+
+                {% endif %}    
+
             </div>
         </div>
     </div>
@@ -86,29 +113,53 @@
             <div class="card-body">
 
   
-                {% if salary_item.rate_type == "variable" %}
-                    <a href="{% url 'salaryitem-variable' salary_item.id %}" title="set salary item employees variable"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-user-plus"></i></button></a>
+                {% if item == "credit_union" %}
+                    <a href="{% url 'creditunion-set-details' credit_union.id %}" title="set credit union details for employees"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-user-plus"></i></button></a>
                 {% endif %}
 
                 <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i>  Number of  Employees</h5>
 
                 <div class="inbox-widget" data-simplebar style="max-height: 407px;">
+                    {% if item == "credit_union" %}
+                        {% for data in staff_credit_unions %}
+                        <div class="inbox-item">
+
+                        <div class="inbox-item-img"><img src="{{ data.employee.photo.url }}" class="rounded-circle" alt=""></div>
+                        <p class="inbox-item-author">{{ data.employee.first_name }} {{ data.employee.last_name }}</p>
+                        <p class="inbox-item-text">
+                            Deducts From: {{ data.deduction_start_date|default:"N/A" }} - {{ data.deduction_end_date|default:"N/A" }}
+
+                        </p>
+
+                        <p class="inbox-item-date">
+                            <a href="javascript:(0);" class="btn btn-sm btn-link text-info font-13"> {{ data.amount|intcomma|default:'-' }}</a>
+                        </p> 
+                       </div>
+                        {% endfor %}
+                    
+                    {% else %}
+
                     {% for employee in employees %}
-                    <div class="inbox-item">
+                       <div class="inbox-item">
+
                         <div class="inbox-item-img"><img src="{{ employee.photo.url }}" class="rounded-circle" alt=""></div>
                         <p class="inbox-item-author">{{ employee.first_name }} {{ employee.last_name }}</p>
                         {% comment %} <p class="inbox-item-text">
                             {% if salary_item.rate_type == 'variable' and item.variable is not None %}
                                 {{ salary_item.rate_dependency }} [{{ item.variable }}]
                             {% else %} 
-                                 
+                                
                             {% endif %}
                         </p>
                         <p class="inbox-item-date">
                             <a href="javascript:(0);" class="btn btn-sm btn-link text-info font-13"> {{ item.amount }}</a>
                         </p> {% endcomment %}
-                    </div>
-                    {% endfor %}
+                            </div>
+                        {% endfor %}
+
+                    {% endif %}
+
+
                 </div> <!-- end inbox-widget -->
 
             </div>

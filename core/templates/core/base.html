@@ -52,7 +52,9 @@
     />
 
     {% block styles %} {% endblock styles %}
-    {% include 'django_quill/media.html' %}
+    {% if use_quill %}
+      {% include 'django_quill/media.html' %}
+    {% endif %}
 
   </head>
 

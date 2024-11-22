@@ -1,0 +1,107 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                   <p>
+                    <a href="{% url 'creditunion-add' %}">
+                        <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                            <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Credit Union
+                        </button>
+                       </a>
+                    </p>
+
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Credit Union</th>
+                              <th>Amount (Default)</th>
+                              <th>Start Date (Default)</th>
+                              <th>End Date (Default)</th>
+                              <th>Employees No.</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+ 
+
+        Number.prototype.format = function(n, x) {
+            var re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')';
+            return this.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,');
+        };
+
+       $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'creditunion-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                { "data":"credit_union"},
+                { "data": "amount" },
+                { "data": "deduction_start_date"},
+                { "data": "deduction_end_date" },
+                { "data": "employee_count" },
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'creditunion-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'creditunion-delete' 0 %}`.replace('0', id)
+                 const detailURL = `{% url 'creditunion-detail' 0 %}`.replace('0', id)
+                 
+                 const staffURL = `{% url 'creditunion-set-details' 0 %}`.replace('0', id)
+
+                    return `
+                           <a href="${updateURL}" title="Edit credit union"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                          
+                           <a href="${detailURL}" title="View credit union and staff members details"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-users"></i></button></a>
+
+
+                           <a href="${staffURL}" title="set credit union details for employees"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-user-plus"></i></button></a>
+
+                           <a href="${deleteURL}" title="Delete credit union"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+
+        
+
+    })
+</script>
+{% endblock %}

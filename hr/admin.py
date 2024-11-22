@@ -103,6 +103,14 @@ class StaffSalaryItemAdmin(admin.ModelAdmin):
 
 @admin.register(Loan)
 class LoanAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'loan_type', 'principal_amount', 'interest_rate', 'monthly_installment', 'status')
+    list_display = ('employee', 'loan_type', 'principal_amount', 'interest_rate', 'monthly_installment', 'duration_in_months', 'total_repayable_amount', 'outstanding_balance', 'status')
     list_filter = ('loan_type', 'status')
     search_fields = ('employee__first_name', 'employee__last_name')
+
+@admin.register(CreditUnion)
+class CreditUnionAdmin(admin.ModelAdmin):
+    list_display = ('union_name', 'amount',  'deduction_start_date', 'deduction_end_date', )
+
+@admin.register(StaffCreditUnion)
+class StaffCreditUnionAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'credit_union', 'amount', 'deduction_start_date', 'deduction_end_date')

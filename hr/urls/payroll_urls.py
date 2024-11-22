@@ -32,3 +32,25 @@ urlpatterns += [
     path('salary-items/<int:pk>/employees/', SalaryItemEmployeeDetailView.as_view(), name='salaryitem-employee'),
     path('salary-items/<int:pk>/set-variable/', SalaryItemVariableDetailView.as_view(), name="salaryitem-variable"),
 ]
+
+# Loan
+urlpatterns += [
+    path('loans/', LoanListView.as_view(), name='loan-list'),
+    path('loans/add/', LoanCreateView.as_view(), name='loan-add'),
+    path('loans/<int:pk>/update/', LoanUpdateView.as_view(), name='loan-update'),
+    path('loans/<int:pk>/delete/', LoanDeleteView.as_view(), name='loan-delete'),
+    path('loans/api/', LoanListApiView.as_view(), name='loan-list-api'),
+    path('loans/<int:pk>/detail/', LoanDetailView.as_view(), name='loan-detail'),
+]
+
+# Credit Union 
+urlpatterns += [
+      path('credit-unions/', CreditUnionListView.as_view(), name='creditunion-list'),
+      path('credit-unions/<int:pk>/update/', CreditUnionUpdateView.as_view(), name='creditunion-update'),
+      path('credit-unions/add/', CreditUnionCreateView.as_view(), name='creditunion-add'),
+      path('credit-unions/<int:pk>/delete/', delete_credit_union, name='creditunion-delete'),
+      path('credit-unions/<int:pk>/detail/', CreditUnionDetailView.as_view(), name='creditunion-detail'),
+      path('credit-unions/api/', CreditUnionListApiView.as_view(), name='creditunion-list-api'),
+      path('credit-unions/<int:pk>/set-employee-detail/', CreditUnionSetEmployeeDetailView.as_view(), name='creditunion-set-details'),
+  
+]

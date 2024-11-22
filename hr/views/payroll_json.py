@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from hr.models.payroll import SalaryGrade, Tax, SalaryItem
+from hr.models.payroll import SalaryGrade, Tax, SalaryItem, Loan, CreditUnion
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 from datetime import date
@@ -141,6 +141,85 @@ def load_salary_items(request):
         data.append({'id':item.id, 'name':item.item_name})
     return JsonResponse(data, safe=False)      
 
-
+class LoanListApiView(LoginRequiredMixin, BaseDatatableView):
+    model = Loan
+    columns = ['employee', 'loan_type', 'principal_amount', 'interest_rate', 'duration_in_months', 'monthly_installment', 'outstanding_balance', 'status', 'applied_on',  'deduction_end_date', 'created_at']
        
+    def render_column(self, row, column):
+        if column == 'created_at':
+            return row.created_at.strftime('%d %b, %Y')  # Format the created_at field
+        
+        if column == 'applied_on':
+            return row.applied_on.strftime('%d %b, %Y')  # Format the created_at field
+        
+        if column == 'deduction_end_date':
+            return row.deduction_end_date.strftime('%d %b, %Y') if row.deduction_end_date else '-'  # Format the created_at field
+
+        if column == 'status':
+            return {'theme':row.get_status_theme(), 'status':row.get_status_display()} 
+              
+        return super().render_column(row, column)
+
+    def get_initial_queryset(self):
+        return Loan.objects.all().order_by('applied_on', 'approved_on')
     
+    def filter_queryset(self, qs):
+        search = self.request.GET.get('search[value]', None)
+        if search:
+            qs = qs.filter(
+                Q(loan_type__icontains=search) |
+                # Q(condition__icontains=search) |
+                # Q(rate_amount__icontains=search) |
+                # Q(rate_type__icontains=search) |
+                # Q(rate_dependency__icontains=search) |
+                # Q(alias_name__icontains=search) |
+                # Q(salary_grade__grade__icontains=search) |
+                Q(employee__first_name__icontains=search) |
+                Q(employee__last_name__icontains=search)
+
+            )
+        # process drop down filters from template
+        status = self.request.GET.get('filterStatus')
+        loan_type = self.request.GET.get('filterLoanType')
+
+        if status:
+            qs = qs.filter(status=status)
+        if loan_type:
+            qs = qs.filter(loan_type=loan_type)
+            
+        return qs
+    
+# Credit Unions 
+
+class CreditUnionListApiView(LoginRequiredMixin, BaseDatatableView):
+    model = CreditUnion
+    columns = ['credit_union', 'amount', 'deduction_start_date', 'employee_count', 'deduction_end_date', 'created_at']
+
+    def render_column(self, row, column):
+        if column == 'created_at':
+            return row.created_at.strftime('%d %b, %Y')  # Format the created_at field
+        
+        if column == 'credit_union':
+            return row.union_name
+        
+        if column == 'deduction_start_date':
+            return row.deduction_start_date.strftime('%d %b, %Y') if row.deduction_start_date else '-'  
+        
+        if column == 'deduction_end_date':
+            return row.deduction_end_date.strftime('%d %b, %Y') if row.deduction_end_date else '-'
+
+        if column == 'employee_count':
+            return row.get_eligible_employees().count()
+          
+        return super().render_column(row, column)
+    
+    def get_initial_queryset(self):
+        return CreditUnion.objects.all()
+    
+    def filter_queryset(self, qs):
+        search = self.request.GET.get('search[value]', None)
+        if search:
+            qs = qs.filter(
+                Q(union_name__icontains=search)
+            )
+        return qs

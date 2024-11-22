@@ -1,0 +1,136 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/flatpickr/flatpickr.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+<script src="{% static 'plugin/libs/flatpickr/flatpickr.min.js' %}"></script>
+{% endblock %}
+
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST">
+                    {% csrf_token %}
+        
+                    <div class="row mb-3">
+                        <div class="col-lg-4">
+                            {{ form.applied_on|as_crispy_field }}
+                        </div>
+                        <div class="col-lg-4">
+                            {{ form.loan_type|as_crispy_field }}
+                        </div>                       
+                        <div class="col-lg-4">
+                            {{ form.employee|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-lg-4">
+                            {{ form.principal_amount|as_crispy_field }}
+                            <span class="text-info" id="repayable-data">Total Repayable Amount: <span id="repayable-amount"></span></span>
+                           
+                        </div>
+                        <div class="col-lg-4">
+                            {{ form.duration_in_months|as_crispy_field }}
+                            <span class="text-success" id="installment-data">Monthly Installment: <span id="installment-amount"></span></span>
+                        </div>
+                        <div class="col-lg-4">
+                            {{ form.interest_rate|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-lg-8">
+                            {{ form.purpose|as_crispy_field }}
+                        </div>
+                        <div class="col-lg-4">
+                            {{ form.status|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <p class="mt-2">
+                        <a href="{% url 'loan-list' %}">
+                            <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                        </a>
+                        <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                    </p>     
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        $('.select, .selectmultiple').select2();
+        $('.dateinput').flatpickr({ altInput: true, altFormat: "F j, Y", dateFormat: "Y-m-d" });
+
+        Number.prototype.format = function(n, x) {
+            var re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')';
+            return this.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,');
+        };
+
+        function calculateMonthlyInstallment(monthDuration, principalAmount, interestRate){
+            let totalRepayableAmount = 0
+            // for loan with no interest, make totalRepayableAmount to be equal to principal
+            if(interestRate == 0 || interestRate == ''){
+                totalRepayableAmount = principalAmount
+            }else{
+                // self.principal_amount * (1 + (self.interest_rate / 100))
+               totalRepayableAmount =  principalAmount * (1 + interestRate / 100)
+            }
+            let monthlyInstallment = totalRepayableAmount / monthDuration
+            console.log(`Repayable: ${totalRepayableAmount} - monthly installment: ${monthlyInstallment}`)
+
+            
+            $('#installment-amount').text(monthlyInstallment.format(2))
+            $('#repayable-amount').text(totalRepayableAmount.format(2))
+        }
+
+        // call the function upon update or form refresh
+            let monthDuration = parseFloat($('#id_duration_in_months').val())
+            let principalAmount = parseFloat($('#id_principal_amount').val())
+            let interestRate = parseFloat($('#id_interest_rate').val())
+            
+            if(monthDuration && principalAmount){
+                calculateMonthlyInstallment(monthDuration, principalAmount, interestRate)
+            }
+
+
+       
+
+        $('#id_duration_in_months, #id_principal_amount, #id_interest_rate').on('change input paste keydown keyup keypress', function(){
+            let monthDuration = parseFloat($('#id_duration_in_months').val())
+            let principalAmount = parseFloat($('#id_principal_amount').val())
+            let interestRate = parseFloat($('#id_interest_rate').val())
+
+            if(monthDuration > 0 && principalAmount > 0 && (interestRate == 0 || interestRate > 0 || interestRate == '')){
+                calculateMonthlyInstallment(monthDuration, principalAmount, interestRate)
+            }else{
+                $('#installment-amount').text('')
+                $('#repayable-amount').text('')
+               
+            }
+
+        })
+   
+    })
+</script>
+{% endblock %}

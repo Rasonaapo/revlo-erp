@@ -1,5 +1,5 @@
 from datetime import timedelta
-from hr.models.employee import PublicHoliday
+from hr.models.employee import PublicHoliday, Employee
 from hr.models.payroll import SalaryItem
 from datetime import datetime
 
@@ -36,4 +36,22 @@ def compute_factor(employee, rate_amount, rate_dependency):
         amount = (rate_amount / 100) * salary_item.rate_amount
     
     return amount
+
+# a method to synthetically retrieve eligible employees for credit union to make update seamless with transactions
+def get_filtered_staff_credit_union(all_employee, department, applicable_to, excluded_from):
+
+    eligible_employee = Employee.objects.active()
+
+    # if all employee is checked, return all
+    if all_employee:
+        return eligible_employee
     
+    # Navigate through the filters if not all employee was specified
+    if department.exists():
+        eligible_employee = eligible_employee.filter(job__department__in=department.all())
+    if applicable_to.exists():
+        eligible_employee = applicable_to.all()
+    if excluded_from.exists():
+        eligible_employee = eligible_employee.exclude(id__in=excluded_from.values_list('id', flat=True))
+
+    return eligible_employee

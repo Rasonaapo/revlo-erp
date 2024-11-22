@@ -199,6 +199,8 @@ class JobCreateView(LoginRequiredMixin, CreateView):
             for category in skills_by_category
         }
         context['categorized_skills'] = categorized_skills
+        context['use_quill'] = True
+
         return context
 
     def form_valid(self, form):
@@ -221,6 +223,7 @@ class JobUpdateView(LoginRequiredMixin, UpdateView):
             for category in skills_by_category
         }
         context['categorized_skills'] = categorized_skills
+        context['use_quill'] = True
         return context
     
     def form_valid(self, form):
@@ -247,7 +250,8 @@ class JobEmployeeDetailView(LoginRequiredMixin, DetailView):
         context['title'] = f"{self.get_object().job_title} Employees"
         context['item'] = 'job'
         context['employees'] = Employee.objects.filter(job=self.get_object())
-        
+        context['use_quill'] = True
+  
         return context
 
 

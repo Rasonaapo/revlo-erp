@@ -1,0 +1,162 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                   <p>
+                    <a href="{% url 'loan-add' %}">
+                        <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                            <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Loan
+                        </button>
+                       </a>
+                    </p>
+
+                    <p>
+                        <div class="row">
+                         <div class="col-md-2">
+                             <label for="filterStatus" class="text-info">Filter by Status</label>
+                             <select id="filterStatus" class="form-control select2" data-toggle="select2" data-width="100%">
+                              <option value="">All Statuses</option>
+                              {% for value, label in status_labels %}
+                                 <option value="{{ value }}"> {{ label }} </option>
+                              {% endfor %}
+                             </select>    
+                         </div>
+                         <div class="col-md-2">
+                            <label for="filterLoanType" class="text-info">Filter by Loan Type</label>
+                            <select id="filterLoanType" class="form-control select2" data-toggle="select2" data-width="100%">
+                             <option value="">All Loan Types</option>
+                             {% for value, label in loan_types %}
+                                <option value="{{ value }}"> {{ label }} </option>
+                             {% endfor %}
+                            </select>    
+                        </div>
+
+                        </div>
+                    </p>
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Staff</th>
+                              <th>Loan Type</th>
+                              <th>Principal</th>
+                              <th>Applied on</th>
+                              <th>Interest</th>
+                              <th>Dur. Month</th>
+                              <th>Inst. Month</th>
+                              <th>Outstanding Bal</th>
+                              <th>Status</th>
+                              <th>Ded. End Date</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+ 
+        $('.select2, .selectmultiple').select2();
+
+        Number.prototype.format = function(n, x) {
+            var re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')';
+            return this.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,');
+        };
+
+       var table = $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'loan-list-api' %}",
+                "type": "GET",
+                "data": function(d){
+                    d.filterStatus = $('#filterStatus').val(),
+                    d.filterLoanType = $('#filterLoanType').val()
+                }
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                { "data":"employee"},
+                { "data": "loan_type" },
+                { "data": "principal_amount", "render":function(data, type, row){
+                    const principalAmount = parseFloat(data)
+                    return `${principalAmount.format(2)}`
+                } },
+                { "data": "applied_on" },
+                { "data": "interest_rate" },
+                { "data": "duration_in_months", "render":function(data, type, row){
+                    return `<span class='badge bg-dark'>${data}</span>`
+             
+                } },
+                { "data": "monthly_installment", "render":function(data, type, row){
+                    const monthlyInstallment = parseFloat(data)
+                    return `${monthlyInstallment.format(2)}`
+                } },
+                { "data": "outstanding_balance", "render":function(data, type, row){
+                    const outstandingBalance = parseFloat(data)
+                    return `${outstandingBalance.format(2)}`
+                } },
+                { "data": "status", "render":function(data, type, row){
+                    const { theme, status } = data
+                    return `<span class='badge bg-${theme}'>${status}</span>`
+
+                } },
+                { "data": "deduction_end_date" },
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'loan-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'loan-delete' 0 %}`.replace('0', id)
+                 const detailURL = `{% url 'loan-detail' 0 %}`.replace('0', id)
+                 
+                    return `
+                           <a href="${updateURL}" title="Edit loan"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                          
+                           <a href="${detailURL}" title="View loan and repayment history"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-history"></i></button></a>
+
+                           <a href="${deleteURL}" title="Delete loan"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+        $('#filterStatus, #filterLoanType').on('change', function(){
+            table.ajax.reload()
+        })
+        
+
+    })
+</script>
+{% endblock %}

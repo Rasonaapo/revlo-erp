@@ -1,0 +1,98 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-5 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+
+                    <a href="{% url 'loan-update' loan.id %}" title="Edit loan"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'loan-list' %}" title="View loans"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Loan Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Employee :</strong> <span class="ms-2">{{ loan.employee.first_name }} {{ loan.employee.last_name }}</span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Loan Type :</strong> <span class="ms-2">{{ loan.get_loan_type_display }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Principal Amt :</strong> <span class="ms-2">{{ loan.principal_amount|intcomma }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Interest Rate :</strong> 
+                        <span class="ms-2">
+                            {% if loan.interest_rate > 0 %}
+                                {{ loan.interest_rate|floatformat:0 }}%
+                            {% else %}
+                                -
+                            {% endif %}
+                         </span>
+                        </p>
+                    
+                    <p class="text-muted mb-2 font-13"><strong>Duration (Months) :</strong> <span class="ms-2">{{ loan.duration_in_months }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Monthly Installment :</strong> <span class="ms-2">{{ loan.monthly_installment|intcomma }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Repayable Amount :</strong> <span class="ms-2">{{ loan.total_repayable_amount|intcomma }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Outstanding Balance :</strong> <span class="ms-2">{{ loan.outstanding_balance|intcomma }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Status :</strong> <span class='badge bg-{{ loan.get_status_theme }}'>{{ loan.get_status_display }}</span>  </p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Purpose :</strong> <span class="ms-2">{{ loan.purpose.html|safe }} </span></p>
+                    
+
+                    <p class="text-muted mb-2 font-13"><strong>Applied On :</strong> <span class="ms-2">{{ loan.applied_on|date:'d M, Y' }} </span></p>  
+
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ loan.created_at|date:'d M, Y h:i A' }} </span></p>  
+
+                    <p class="text-muted mb-2 font-13"><strong>Last Updated On :</strong> <span class="ms-2">{{ loan.updated_on|date:'d M, Y h:i A'|default:'-' }} </span></p>  
+
+
+
+
+
+               
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-7 col-xl-7">
+        <div class="card">
+            <div class="card-body">
+
+
+                <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i>  Repayment History </h5>
+
+                <div class="inbox-widget" data-simplebar style="max-height: 407px;">
+                  {% if loan_repayments %}
+                    {% for payment in loan_repayments %}
+                    <div class="inbox-item">
+                        <div class="inbox-item-img"><img src="{{ employee.photo.url }}" class="rounded-circle" alt=""></div>
+                        <p class="inbox-item-author">Ref# {{ payment.payment_reference }} on {{ payment.date_paid|date:'d M, Y' }}</p>
+                        {% comment %} <p class="inbox-item-text">
+                            {% if salary_item.rate_type == 'variable' and item.variable is not None %}
+                                {{ salary_item.rate_dependency }} [{{ item.variable }}]
+                            {% else %} 
+                                 
+                            {% endif %}
+                        </p>
+                        {% endcomment %}
+                        <p class="inbox-item-date">
+                            <a href="javascript:(0);" class="btn btn-sm btn-link text-info font-13"> {{ payment.amount_paid|intcomma }}</a>
+                        </p> 
+                    </div>
+                    {% endfor %}
+                  {% else %}
+                  <p class="inbox-item-text">There are no repayments records on this loan yet</p>
+                  {% endif %}
+                </div> <!-- end inbox-widget -->
+
+            </div>
+
+        </div>       
+    </div>
+</div>
+{% endblock %}
