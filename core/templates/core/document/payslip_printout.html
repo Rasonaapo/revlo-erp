@@ -1,0 +1,180 @@
+{% extends 'core/base_document.html' %}
+
+{% block content %}
+{% load humanize %}
+
+<center>  <div class="receipt" style="width: 500px; padding: 2px; border-radius: 10px;  border: 2px solid black; font:Bold 16px Verdana; margin-top: 10px"> Staff Payslip for the Month of {{ payroll.get_process_month_display }} {{ payroll.process_year }} </div> </center>
+<BR>
+
+    <div class="row">
+        <div class="col-lg-6">
+             <table style="margin-left: 10%">
+                 <tr>
+                     <th>Name: </th>
+                     <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                 </tr>
+                 <tr>
+                     <th>Staff ID: </th>
+                     <td>{{ employee.employee_id }}</td>
+                 </tr>
+                 <tr>
+                     <th>Designation: </th>
+                     <td>{{ employee.designation.title }}</td>
+                 </tr>
+                 <tr>
+                     <th>Bank: </th>
+                     <td>{{ employee.bank }}</td>
+                 </tr>
+                 <tr>
+                     <th>Branch: </th>
+                     <td>{{ employee.branch|capfirst }}</td>
+                 </tr>
+             </table>
+        </div>
+
+        <div class="col-lg-6">
+             <table style="margin-left: 10%">
+
+                 <tr>
+                     <th>Rank: </th>
+                     <td>{{ employee.designation.level }}</td>
+                 </tr>
+                 <tr>
+                     <th>Department: </th>
+                     <td>{{ employee.job.department.department_name }}</td>
+                 </tr>
+                 <tr>
+                     <th>TIN: </th>
+                     <td>{{ employee.tin|default:'-' }}</td>
+                 </tr>
+                   <tr>
+                     <th>SSNIT No: </th>
+                     <td>{{ employee.ssnit }}</td>
+                  </tr>
+                 <tr>
+                     <th>A/C No.: </th>
+                     <td>{{ employee.account_number }}</td>
+                 </tr>
+
+             </table>
+        </div>
+    </div>
+
+    <hr class="text-dark" style="border-color: black">
+    <div class="row mt-1">
+        <div class="col-lg-2"> </div>
+        <div class="col-lg-5">
+            <table>
+                <tr>
+                    <th>Annual Salary: </th>
+                    <th><span class="ml-10">{{ annual_salary|intcomma }}</span></th>
+                </tr>
+            </table>
+        </div>
+        <div class="col-lg-5">
+
+             <table>
+                <tr>
+                    <th>Tax Relief: </th>
+                    <th><span class="ml-10">{{ tax_relief|intcomma|default:'-'}}</span></th>
+                </tr>
+            </table>
+                   
+        </div>
+    </div>
+
+    <hr class="text-dark" style="border-color: black">
+    <div class="row mt-1">
+        <div class="col-lg-2"></div>
+
+
+        <div class="col-lg-4">
+            <table width="80%">
+                <tr>
+                    <th><u>Item Description</u></th>
+                    <th><u>Earnings</u></th>
+                </tr>
+                {% for e in earnings %}
+                    <tr>
+                        <th> {{ e.item}} </th>
+                        <th style="text-align:left">{{ e.amount|intcomma }}</th>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="col-lg-4">
+            <table width="80%">
+                <tr>
+                    <th><u>Item Description</u></th>
+                    <th><u>Deductions</u></th>
+                </tr>
+                {% for d in deductions %}
+                <tr>
+                    <th> {{ d.item}} </th>
+                    <th style="text-align:left">{{ d.amount|intcomma }}</th>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="col-lg-2"></div>
+    </div>
+
+    <hr class="text-dark" style="border-color: black">
+
+    <div class="row mt-1">
+        <div class="col-lg-2"></div>
+
+        <div class="col-lg-4">
+            <table width="80%">
+                <tr>
+                    <th>Gross Pay:</th>
+                    <th style="text-align:left"><span style="margin-left: -30px">{{ gross_salary|intcomma }}</span></th>
+                </tr>
+            </table>
+        </div>
+
+        <div class="col-lg-4">
+            <table width="80%">
+                <tr>
+                    <th>Total Deductions:</th>
+                    <th style="text-align:left;"><span style="margin-right:20px">{{ total_deductions|intcomma }}</span></th>
+                </tr>
+            </table>
+
+        </div>
+
+        <div class="col-lg-2"></div>
+    </div>
+
+    <hr class="text-dark" style="border-color: black">
+
+    <div class="row mt-1">
+        <div class="col-lg-2"> </div>
+        <div class="col-lg-10">
+            <table width="40%">
+                <tr>
+                    <th><u>Net Pay: </u></th>
+                    <th><span class="ml-10"><u>GHS {{ net_salary|intcomma }}</u></span></th>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+
+<!--  -->
+
+  <p class="mt-4">
+     <table class="table">
+         <tr>
+             <td width="20%;"> &nbsp;</td>
+             <td width="40%"> <b>Employee's Signature</b>:........................................</td>
+             <td width="40%"> <b>Employer's Signature</b>:........................................ </td>
+         </tr>
+     </table>
+  </p>
+  <br>
+
+
+
+{% endblock %}

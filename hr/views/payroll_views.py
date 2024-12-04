@@ -9,10 +9,16 @@ from hr.models.payroll import *
 from hr.models.employee import Employee
 from django.db import transaction, DatabaseError, IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from ..forms.payroll_forms import SalaryItemForm, LoanForm, CreditUnionForm
+from ..forms.payroll_forms import SalaryItemForm, LoanForm, CreditUnionForm, PayrollForm
+from django.db.models import Q, Prefetch, Sum, Count
+from hr.models.payroll import SalaryGrade, Tax
+from .utils import compute_factor, get_filtered_staff_credit_union, get_filtered_staff_payroll
+from decimal import Decimal
+import logging
+from pprint import pprint
 
-from hr.models.payroll import SalaryGrade
-from .utils import compute_factor, get_filtered_staff_credit_union
+logger = logging.getLogger(__name__)
+
 
 class SalaryGradeListView(LoginRequiredMixin, ListView):
     model = SalaryGrade
@@ -89,7 +95,7 @@ class SalaryGradeEmployeeDetailView(LoginRequiredMixin, DetailView):
         return context   
 
 # Tax Setup
-
+@login_required
 def setup_tax(request):
     context = {'title':'Tax Setup'}
 
@@ -313,9 +319,7 @@ class SalaryItemUpdateView(LoginRequiredMixin, UpdateView):
                 form.add_error(None, "An error occured while saving Salary Item. Please try again")
                 return self.form_invalid(form)
 
-
-    
-    
+@login_required  
 def delete_salary_item(request, pk):
     salary_item = SalaryItem.objects.get(id=pk)
 
@@ -442,7 +446,6 @@ class LoanUpdateView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, f"{self.get_object()} successfully updated")
         return super().form_valid(form)
     
-
 class LoanDeleteView(LoginRequiredMixin, DeleteView):
     model = Loan
     template_name = 'core/delete.html'
@@ -547,8 +550,6 @@ class CreditUnionCreateView(LoginRequiredMixin, CreateView):
                 form.add_error(None, "An error occured while saving Credit Union. Please try again")
                 return self.form_invalid(form)
             
-    
-
 class CreditUnionUpdateView(LoginRequiredMixin, UpdateView):
     model = CreditUnion
     form_class = CreditUnionForm
@@ -589,9 +590,6 @@ class CreditUnionUpdateView(LoginRequiredMixin, UpdateView):
             # compute employees to be added to staff credit union
             employee_to_add = new_employees - old_employees
             employee_to_remove = old_employees - new_employees
-
-            print(f"Employee to add: {employee_to_add}")
-            print(f"Employee to remove: {employee_to_remove}")
             
             # Check for changes in the fields and update for existing staff credit union records
             if old_instance.amount != new_instance.amount: 
@@ -648,6 +646,7 @@ class CreditUnionDetailView(LoginRequiredMixin, DetailView):
         context['staff_credit_unions'] = StaffCreditUnion.objects.filter(credit_union=credit_union)
         return context
 
+@login_required
 def delete_credit_union(request, pk):
     credit_union = CreditUnion.objects.get(id=pk)
 
@@ -706,7 +705,6 @@ class CreditUnionSetEmployeeDetailView(LoginRequiredMixin, DetailView):
                     if end_date and not start_date and not amount:
                         errors.append(f"Start date and or amount must be set if end date is specified for {staff_credit_union.employee} on line {line}")
                     
-
                     # Update the fields with relevant data
                     staff_credit_union.amount = amount or None
                     staff_credit_union.deduction_start_date = start_date or None
@@ -718,15 +716,698 @@ class CreditUnionSetEmployeeDetailView(LoginRequiredMixin, DetailView):
                 
                 if len(errors) > 0:
                     error_messages = "<br>".join([error for error in errors])
-                    return JsonResponse({'errors': errors}, status=400)
-                
+                    return JsonResponse({'errors': errors}, status=400)             
                 # Perform bulk update
                 StaffCreditUnion.objects.bulk_update(entries_to_update, ['amount', 'deduction_start_date', 'deduction_end_date'])
 
                 return JsonResponse({"status":"success", "message":"Employees details successfully updated"})
 
-
              except DatabaseError:
                  return JsonResponse({'status':'error', 'message':'An error occured while processing record. Try again later'})
 
+class PayrollCreateView(LoginRequiredMixin, CreateView):
+    model = Payroll
+    template_name = 'hr/payroll/process_payroll.html'
+    form_class = PayrollForm
+    success_url = reverse_lazy('process-payroll')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Process Payroll"
+        return context
+
+    def form_valid(self, form):
+        # ensure atomicity
+        cleaned_data = form.cleaned_data
+        
+        synthetic_employees = get_filtered_staff_payroll(cleaned_data)
+        error_mode = cleaned_data['error_mode']
+
+        with transaction.atomic():
+            try:
+                # commit the form to get the instance
+                payroll_instance = form.save(commit=False)
+                if form.errors:
+                    errors = form.add_error
+                    return JsonResponse({'errors':errors}, status=400)
+
+                # retrieve filtered eligible employees and proceed with detailed processing of salary items, banks, loan etc
+                if len(synthetic_employees) == 0:
+                    return JsonResponse({'status':'fail', 'message':'Your selected filters did not match any employees. Please adjust and try again.'})
+
+                # Begin payroll processing as we loop through synthetic employee
+                bulk_entries = []; error_entries = []; errors = []; success_message = ''; invalid_employees = set()
+
+                # Retrieve payment rate and use it on every amount
+                payment_rate = cleaned_data['payment_rate']
+                today = date.today()
+
+                for employee in synthetic_employees:
+                    staff_total_earnings = 0; staff_total_deductions = 0; total_credit = 0; total_debit = 0
+
+                    # 1. Tax
+                    if not employee.salary_grade:
+                        errors.append(f"{employee}: Update salary grade details (grade/step/amount)")
+                        # raise an error (set basic salary for grade salary_grade)
+                        error_entries.append(PayrollError(employee=employee, payroll=payroll_instance, error_category='salary_grade'))
+                        continue
+
+                    salary_grade = employee.salary_grade
+                    basic_salary = float(salary_grade.amount)
+                    step = salary_grade.grade_step
+
+                    # compute tax relief
+                    tax_relief = employee.tax_relief or 0
+                    if tax_relief > 0:
+                        tax_relief = (payment_rate * tax_relief) / 100
+
+                    # Check if employee has bank details
+                    if not employee.bank: # or employee.bank.account == None: all in one check..
+                        errors.append(f"{employee}: Update bank details (bank/account number/branch etc)")
+                        # raise an error bank such as either employee has not bank information or bank is not link to chart of account code..
+                        error_entries.append(PayrollError(employee=employee, payroll=payroll_instance, error_category='bank'))
+                        continue
+
+                    # compute for employee & employer ssnits
+                    employer_ssnit = (basic_salary * 13) / 100
+                    employee_ssnit = (basic_salary * 5.5) / 100
+
+                    # get this employee salary items
+                    staff_salary_items = StaffSalaryItem.objects.filter(Q(employee=employee) & Q(amount__gt=0) & (Q(salary_item__expires_on__isnull=True) | Q(salary_item__expires_on__gte=today)) )
+
+                    # if there exists some records, then proceed
+                    if staff_salary_items.exists():
+                        for staff_item in staff_salary_items:
+                            item_amount = float(staff_item.amount) #* payment_rate) / 100
+                            
+                            if staff_item.salary_item.effect == 'addition':
+                                item_entry = 'debit' 
+                                staff_total_earnings += item_amount
+                                # total_debit += item_amount
+                            else:
+                                item_entry = 'credit'
+                                staff_total_deductions += item_amount
+                                # total_credit += item_amount
+
+                            # save this item
+                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='salary_item', dependency=staff_item.salary_item.id, amount=item_amount, entry=item_entry))
+
+                    # get this employee credit unions deductions
+                    staff_credit_unions = StaffCreditUnion.objects.filter(employee=employee, amount__isnull=False).filter(
+                        Q(deduction_start_date__isnull=False,
+                          deduction_end_date__isnull=True,
+                          deduction_start_date__lte=today
+                        ) |
+                        Q(deduction_start_date__isnull=False,
+                          deduction_end_date__isnull=False,
+                          deduction_start_date__lte=today,
+                          deduction_end_date__gte=today
+                        )
+                    )
+                    # check for the existence of active credit unions
+                    if staff_credit_unions.exists():
+                        for staff_credit_union in staff_credit_unions:
+                            monthly_deduction = staff_credit_union.amount
+
+                            StaffCreditUnionDeduction.objects.create(staff_credit_union=staff_credit_union, amount_paid=monthly_deduction, date_paid=today)
+                            # Add monthly deduction to total deduction
+                            staff_total_deductions += monthly_deduction
+                            # Save credit union
+                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='credit_union', description=staff_credit_union.credit_union.union_name,  amount=monthly_deduction, dependency=staff_credit_union.credit_union.id,  entry='credit'))
+
+                    # get employee loan(s)
+                    staff_loans = Loan.objects.filter(employee=employee, status='active', outstanding_balance__gt=0, deduction_end_date__gt=today)
+                    # if there are indeed active loans
+                    if staff_loans.exists():
+                        for loan in staff_loans:
+                            outstanding_balance = loan.outstanding_balance
+                            monthly_installment = loan.monthly_installment
+                            """pay monthly installment if outstanding balance is greater else pay what it is left. This is because there is a posibility for employee to pay some using other means (like bank transfer/pay-in-slip) apart from payroll"""
+                            
+                            repayment_amount = min(monthly_installment, outstanding_balance)
+
+                            # LoanRepayment.objects.create(loan=loan, amount_paid=repayment_amount)
+                            # Call LoanRepayment in the finance app when PV is posted..
+
+                            # add repayment amount total deduction
+                            staff_total_deductions += repayment_amount
+                            # save individual loan
+                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='loan', description=loan.get_loan_type_display(),  amount=repayment_amount, dependency=loan.id,  entry='credit'))
+                           
+                            # total_credit += repayment_amount
+                    # save earnings and deductions
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='earning',  amount=staff_total_earnings,  entry='debit'))
+                    
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='deduction',  amount=staff_total_deductions,  entry='credit'))
+                   
+                    """add total staff earnings to basic salary which will be gross/taxable.."""
+                    gross = (basic_salary + staff_total_earnings)
+                    taxable = gross
+                    # take out employee ssnit from taxable/basic
+                    taxable -= employee_ssnit
+                    # take out tax relief
+                    taxable -= tax_relief
+
+                    # Now compute for tax
+                    income_tax = Tax.calculate_tax(payroll_instance.process_year, taxable)
+
+                    # Add tax and employee ssnit to staff total deductions
+                    staff_total_deductions = float(staff_total_deductions)
+                    staff_total_deductions += (income_tax  + employee_ssnit)
+
+                    # compute for net salary
+                    net = gross - staff_total_deductions
+
+                    total_debit = gross 
+                    total_credit = net + staff_total_deductions
+                    
+                    #save net salary
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='net_salary', amount=net, entry='credit'))
+                    # save gross salary
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='gross_salary', amount=gross, entry='credit'))
+                    # save taxability
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='taxability', amount=taxable, entry='credit'))
+                   
+
+                    # save bank 
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='bank', amount=net, dependency=employee.bank.id, entry='credit'))
+                    # Save payroll items which are not dynamically gotten from loop
+                    # save basic salary
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='basic_salary', amount=basic_salary,  entry='debit'))
+                    # save salary grade
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='salary_grade', dependency=salary_grade.id))
+                    # save step
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='step', dependency=salary_grade.grade_step.id))
+                    # save tax
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='tax', amount=income_tax, entry='credit'))
+                    # save employer & employee ssnit
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='employer_ssnit', amount=employer_ssnit, entry='credit'))
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='employee_ssnit', amount=employee_ssnit, entry='credit'))
+                    # save tax relief
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='tax_relief', amount=tax_relief, entry='debit'))
+
+                    # print(f"basic: {basic_salary} - tax: {income_tax} 'step: {step} - tax relief: {tax_relief} - ssnit employer: {employer_ssnit} - ssnit employee: {employee_ssnit} - net: {net}")
+
+                    logger.info(f"Employee: {employee} Total Credit: {total_credit} - Total Debit: {total_debit}")
+
+                    """Test double entry"""
+                    logger.info("Double entry check, total credit against total debit")
+
+                    if total_credit != total_debit:
+                        msg = f"{employee}: Total credit {total_credit} differs from debit {total_debit}"
+                        logger.warning(msg)
+                        errors.append(msg)
+                        error_entries.append(PayrollError(employee=employee, payroll=payroll_instance, error_category='double_entry'))
+                        invalid_employees.add(employee.id)
+                        # clear employee records from PayrollItem
+                        continue                   
+
+                    """Unlike my first version which was made in PHP (CodeIgniter) that strictly required that all data about employee must be intact before processing, this version should inform the admin of missing/vital details of certain employees and give them the option to proceed with processing without those employee(s). However, the system will document or keep these employees along with what they lacked whether (bank, salary grade, basic salary etc). Also, the system will be able to process the payroll without the mapping of real chart of account to payroll items such loans, credit unions, salary items etc, but in processing the processed payrolls for payment, those details will be mandatory since eventually, these funds must hit final accounts"""
+
+                # for                
+                # Filter out employee that has double entry issue..exclude them from payrollItem
+                bulk_entries = [entry for entry in bulk_entries if entry.employee.id not in invalid_employees]
+
+                # if error mode is strict, keep reporting when there are errors
+                if error_mode == 'strict':
+                    if errors:
+                        # Strict mode: abort and return the list of errors for the template
+                        logger.warning(f"Strict mode aborted due to {len(errors)} error(s).")
+                        return JsonResponse({'status':'fail', 'message':list(errors), 'option':True}, safe=False)
+                    else:
+                        # Strict mode: processed without warnings
+                        logger.info("Strict mode processing: No errors found.")
+                        payroll_instance.save()
+                        PayrollItem.objects.bulk_create(bulk_entries)
+                        success_message = f"Payroll processed {len(synthetic_employees)} employee(s) successfully"         
+                else:
+                    # Mute mode: Process regardless of errors but saved for later reference
+                    logger.info("Mute mode: Processing with errors logged for review.")
+                    # if there are errors, save the error related object and save payroll and commit..
+                    payroll_instance.save()
+                    PayrollItem.objects.bulk_create(bulk_entries)
+                    
+                    if errors and error_entries:
+                        # Error saved for future reference
+                        logger.warning(f"Processed {len(synthetic_employees)} employee(s) with {len(error_entries)} warning(s). Errors logged.")
+                        PayrollError.objects.bulk_create(error_entries)
+                        success_message = f"Payroll processed {len(synthetic_employees)} employee(s) successfully with {len(error_entries)} warning(s)"
+                    else:
+                        # No warnings, mute mode was effectively a clean run
+                        logger.info("Mute mode processed successfully without warnings.")
+                        success_message = f"Payroll processed {len(synthetic_employees)} employee(s) successfully"
+                # Final log and success response if everything is clean
+                logger.info(success_message)
+                return JsonResponse({'status': 'success', 'message': success_message})
+
+            # try
+
+        # with transaction
+    
+            except DatabaseError as e:
+                logger.error(e)
+                self.form_invalid(form)
+                return JsonResponse({'status':'fail', 'message':'A database error occured while processing payroll. Please try again later'})
+            except IntegrityError as e:
+                logger.error(e)
+                self.form_invalid(form)
+                return JsonResponse({'status':'fail', 'message':"An error occured during processing. Please try again later"})
+
+    def form_invalid(self, form):
+        errors = form.errors
+        return JsonResponse({'errors': errors}, status=400)
+
+class PayrollListView(LoginRequiredMixin, ListView):
+    model = Payroll
+    template_name = 'hr/payroll/payroll_list.html'
+    context_object_name = 'payroll_list'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Payroll Records'
+        return context
+
+class PayrollDetailView(LoginRequiredMixin, DetailView):
+    model = Payroll
+    template_name = 'hr/payroll/payroll_detail.html'
+    context_object_name = 'payroll'
+
+    def get_context_data(self, **kwargs):
+        context =  super().get_context_data(**kwargs)
+        payroll = self.get_object()
+        context['title'] = f"{payroll}"
+        # Get distinct employees and for each employee, get net
+        payroll_employees = []
+        employees = Employee.objects.filter(payroll_items__payroll=self.get_object()).distinct().prefetch_related(
+            Prefetch(
+                'payroll_items',
+                queryset=PayrollItem.objects.filter(payroll=payroll, item_type='bank'),
+                to_attr='bank_items'
+            ),
+            Prefetch(
+                'payroll_items',
+                queryset=PayrollItem.objects.filter(payroll=payroll, item_type='salary_grade'),
+                to_attr='salary_grade_items'
+            )
+        )
+
+        for employee in employees:
+            # Ensure bank item returned  valid data to avoid ValueError/AttributeError Exception
+            bank_item = employee.bank_items[0] if employee.bank_items else None
+            # Repeat same for salary_grade_item
+            salary_grade_item = employee.salary_grade_items[0] if employee.salary_grade_items else None
+
+            # Retrieve actual bsnk and salary grade data
+            net_salary = bank_item.amount or 0
+            salary_grade = salary_grade_item.description or 'N/A'
+            bank_name = employee.bank.bank_name or 'N/A'
+            branch = employee.branch or 'N/A'
+            
+            payroll_employees.append({
+                'employee': f"{employee.first_name} {employee.last_name}",
+                'net_salary': net_salary,
+                'bank_name': f"{bank_name} ({branch})", 
+                'account_number':employee.account_number or 'N/A'
+            })
+            context['payroll_employees'] = payroll_employees
+        # for
+
+        # Get distinct bank involved in this payroll and compute the total of employee's net salary under each bank
+
+        payroll_banks = Bank.objects.filter(employees__payroll_items__payroll=payroll).distinct().annotate(
+            total_amount=Sum('employees__payroll_items__amount', filter=Q(employees__payroll_items__payroll=payroll, employees__payroll_items__item_type='bank')), 
+            employee_count=Count('employees', distinct=True, filter=Q(employees__payroll_items__payroll=payroll))
+            )
+        for bank in payroll_banks:
+            pprint(vars(bank))
+
+
+        context['payroll_banks'] = [
+            {'bank_name':bank.bank_name, 'amount': bank.total_amount, 'employee_count':bank.employee_count}
+
+            for bank in payroll_banks
+        ]
+
+        context['payroll_errors'] = PayrollError.objects.filter(payroll=payroll)
+
+
+        return context
+
+@login_required  
+def delete_payroll(request, pk):
+    payroll = Payroll.objects.get(id=pk)
+
+    if request.method == "POST":
+        payroll.delete()
+        messages.success(request, f"{payroll} successfully deleted")
+        return redirect('payroll-list')
+
+    return render(request, 'core/delete.html', {'obj':payroll, 'title': f'Delete {payroll}?'})
+
+
+
+class PayrollPayslipListView(LoginRequiredMixin, ListView):
+    model = Payroll
+    template_name = 'hr/payroll/payslip_list.html'
+    context_object_name = 'payrolls'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Payslips'
+        return context
+    
+    def get(self, request, *args, **kwargs):
+        # Ensure the request header is an ajax request
+        if request.headers.get('x-requested-with') == "XMLHttpRequest":
+            payroll_id = request.GET.get('payroll_id')
+            payroll = get_object_or_404(Payroll, id=payroll_id)
+
+            # Get employees for this payroll and related items from payroll items
+            payroll_employees = Employee.objects.filter(payroll_items__payroll=payroll).distinct().prefetch_related(
+                Prefetch(
+                    'payroll_items',
+                    queryset=PayrollItem.objects.filter(payroll=payroll),
+                    to_attr='all_payroll_items'
+                )
+            )
+            employee_data = []
+            for employee in payroll_employees:
+                basic_salary = None; gross_salary = None; net_salary = None; 
+                earning = None; deduction = None; tax = None; employee_ssnit = None
+
+                for item in employee.all_payroll_items:
+                    if not basic_salary and item.item_type == 'basic_salary':
+                        basic_salary = item.amount
+                    if not gross_salary and item.item_type == 'gross_salary':
+                        gross_salary = item.amount
+                    if not net_salary and item.item_type == 'net_salary':
+                        net_salary = item.amount
+                    if not earning and item.item_type == 'earning':
+                        earning = item.amount
+                    if not deduction and item.item_type == 'deduction':
+                        deduction = item.amount
+                    if not tax and item.item_type == 'tax':
+                        tax = item.amount
+                    if not employee_ssnit and item.item_type == 'employee_ssnit':
+                        employee_ssnit = item.amount
+
+                    # Exit if all match are found
+                    if basic_salary and gross_salary and net_salary and tax and employee_ssnit and earning and deduction:
+                        break
+                
+                employee_data.append({
+                    'id':employee.id,
+                    'employee_id':employee.employee_id,
+                    'employee':f"{employee.first_name} {employee.last_name}",
+                    'basic_salary': basic_salary,
+                    'gross_salary':gross_salary,
+                    'net_salary':net_salary,
+                    'tax':tax,
+                    'employee_ssnit':employee_ssnit,
+                    'earning':earning,
+                    'deduction':deduction
+                })
+
+            return JsonResponse({'employees':employee_data}, safe=False)
+                   
+
+        return super().get(request, *args, **kwargs)
+
+def generate_payslip(request, uri_params):
+    from django.http import Http404
+
+    # extract employee_id and payroll_id from params
+    try:
+        employee_id, payroll_id = uri_params.split('_')
+    except ValueError:
+        raise Http404("Invalid URI Parameters")
+
+    try:
+        employee = Employee.objects.get(employee_id=employee_id)
+        payroll = Payroll.objects.get(id=payroll_id) 
+    except Employee.DoesNotExist:
+        raise Http404("Employee Not Found")
+    except Payroll.DoesNotExist:
+        raise Http404("Payroll Not Found")
+    
+
+    # get payroll items and fetch earnings & deductions
+    payroll_items = PayrollItem.objects.filter(payroll=payroll, employee=employee)
+    earnings = []
+    deductions = []
+    basic_salary = None;  tax_relief = None
+
+    tax = {}; ssnit = {}; loans = []; unions = []; other_deductions = []
+
+    for item in payroll_items:
+        item_type = item.item_type
+        entry = item.entry
+        amount = item.amount
+        # retrieve all items with type 'salary item' 
+        if item_type == 'salary_item' and entry == 'debit':
+            earnings.append({'item':item.salary_item.alias_name, 'amount':amount })
+        
+        # for items of type tax, ssnit, loan etc with a credit entry, these are deductions
+        elif item_type == 'tax':
+            tax = {'item':'Income Tax', 'amount':amount }
+        elif item_type == 'employee_ssnit':
+             ssnit = {'item':'SSNIT (Employee)', 'amount':amount}
+        elif item_type == 'loan':
+             loans.append({'item': f"Loan ({ item.loan.get_loan_type_display() })", 'amount':amount})
+        elif item_type == 'credit_union':
+             unions.append({'item':f"{item.credit_union.union_name}", 'amount':amount})
+        elif item_type == 'salary_item' and entry == 'credit':
+             other_deductions.append({'item':item.salary_item.alias_name, 'amount':amount })
+        elif item_type == 'basic_salary':
+             basic_salary = amount
+        elif item_type == 'tax_relief':
+            tax_relief = amount
+    # for
+    
+    # Ensure deduction_list are arranged in this order; tax, ssnit, loan, credit union an
+    deductions.extend(filter(None, [tax, ssnit]))
+    deductions.extend(loans)
+    deductions.extend(unions)
+    deductions.extend(other_deductions)
+
+
+    # make the basic salary first item in the earning list
+    if basic_salary is not None:
+        earnings.insert(0, {'item':'Basic Salary', 'amount':basic_salary})
+        
+    # compute for annual salary 
+    annual_salary = (basic_salary * 12) if basic_salary is not None else None
+
+    gross_salary = sum(item['amount'] for item in earnings)
+    total_deductions = sum(item['amount'] for item in deductions)
+    net_salary = gross_salary - total_deductions
+
+
+    context = {
+        'title':f"Staff Payslip",
+        'payroll':payroll,
+        'employee':employee,
+        'earnings':earnings,
+        'deductions':deductions,
+        'gross_salary':gross_salary,
+        'net_salary':net_salary,
+        'annual_salary':annual_salary,
+        'tax_relief':tax_relief,
+        'total_deductions':total_deductions
+    }
+
+    return render(request, 'core/document/payslip_printout.html', context)
+
+# Bank 
+
+class BankListView(LoginRequiredMixin, ListView):
+    model = Bank 
+    template_name = 'hr/payroll/bank_list.html'
+    context_object_name = 'bank_list'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Banks"
+        return context
+
+class BankCreateView(LoginRequiredMixin, CreateView):
+    model = Bank
+    template_name = 'hr/payroll/bank_form.html'
+    fields = ['bank_name']
+    success_url = reverse_lazy('bank-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Add Bank"
+        return context
+
+    def form_valid(self, form):
+
+        messages.success(self.request, f"New bank [{self.get_object()}] successfully created")
+        return super().form_valid(form)
+
+class BankUpdateView(LoginRequiredMixin, UpdateView):
+    model = Bank
+    template_name = 'hr/payroll/bank_form.html'
+    fields = ['bank_name']
+    success_url = reverse_lazy('bank-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"Update {self.get_object()}"
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f"New bank [{self.get_object()}] successfully updated")
+        return super().form_valid(form)
+    
+class BankEmployeeDetailView(LoginRequiredMixin, DetailView):
+    model = Bank 
+    template_name = 'hr/generic/item_detail.html'
+    context_object_name = 'bank'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"{self.get_object()} Employees"
+        context['item'] = 'bank'
+
+        # fetch list of employees saving in this bank
+        context['employees'] = Employee.objects.filter(bank=self.get_object())
+        return context
+
+def delete_bank(request, pk):
+    bank = Bank.objects.get(id=pk)
+
+    if request.method == "POST":
+        bank.delete()
+        messages.success(request, f"{bank} successfully deleted")
+        return redirect(reverse_lazy('bank-list'))
+
+    return render(request, 'core/delete.html', {'title': f"Delete {bank}?", 'obj':bank })
+
+class PayrollVoucherDetailView(LoginRequiredMixin, DetailView):
+    model = Payroll
+    template_name = 'hr/payroll/payroll_voucher.html'
+    context_object_name = 'payroll'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = f"{self.get_object()} - Initiate Payment Voucher"
+        payroll= self.get_object()
+        # print(payroll)
+        # get distinct bank and use it 
+        payroll_banks = Bank.objects.filter(employees__payroll_items__payroll=payroll).distinct()
+        
+        bank_totals = []  # Store results for each bank
+        total_vouchers = 0
+        reconcile_status = 0
+        for bank in payroll_banks:
+            # pprint(vars(bank))
+
+            # Filter payroll items related to the current bank
+            payroll_items = PayrollItem.objects.filter(
+                payroll=payroll,
+                employee__bank=bank  # Filter employees in this bank
+            )
+            print(bank.bank_name)
+
+            # Filter out bank total 
+
+            bank_balance = payroll_items.filter(item_type='bank', bank=bank).values('bank').aggregate(total=Sum('amount'))['total'] or 0
+
+            # Get earning salary items total (grouping by salary_item foreign key)
+            earning_salary_items = (
+                payroll_items.filter(item_type='salary_item', entry='debit')
+                .values('salary_item__id', 'salary_item__alias_name')  # Group by salary_item ForeignKey
+                .annotate(total=Sum('amount'))
+            )
+            total_earning_salary_items = sum(si['total'] for si in earning_salary_items)
+
+            deduction_salary_items = (
+                payroll_items.filter(item_type='salary_item', entry='credit')
+                .values('salary_item__id', 'salary_item__alias_name')  # Group by salary_item ForeignKey
+                .annotate(total=Sum('amount'))
+            )
+            total_deduction_salary_items = sum(si['total'] for si in deduction_salary_items)
+
+            # Get credit unions total (grouping by credit_union foreign key)
+            credit_unions = (
+                payroll_items.filter(item_type='credit_union')
+                .values('credit_union__id', 'credit_union__union_name')  # Group by credit_union ForeignKey
+                .annotate(total=Sum('amount'))
+            )
+            total_credit_unions = sum(cu['total'] for cu in credit_unions)
+
+            # Get loans total (grouping by loan type)
+            loans_grouped_by_type = (
+                payroll_items.filter(item_type='loan')
+                .values('loan__id', 'loan__loan_type')  # Group by loan type
+                .annotate(total=Sum('amount'))
+            )          
+            total_loans = sum(l['total'] for l in loans_grouped_by_type)
+            loans = [
+                {
+                    'loan_type': Loan.objects.get(id=item['loan__id'], loan_type=item['loan__loan_type']).get_loan_type_display(),
+                    'total': item['total']
+                }
+                for item in loans_grouped_by_type
+            ]
+
+
+            # print(loans)
+       
+            # Totals for deductions like SSNIT, Tax
+            total_employee_ssnit = payroll_items.filter(item_type='employee_ssnit').aggregate(total=Sum('amount'))['total'] or 0
+            total_employer_ssnit = payroll_items.filter(item_type='employer_ssnit').aggregate(total=Sum('amount'))['total'] or 0
+            total_tax = payroll_items.filter(item_type='tax').aggregate(total=Sum('amount'))['total'] or 0
+            
+            total_tax_relief = payroll_items.filter(item_type='tax_relief').aggregate(total=Sum('amount'))['total'] or 0
+
+            # Totals for basic salary
+            total_basic_salaries = payroll_items.filter(item_type='basic_salary').aggregate(total=Sum('amount'))['total'] or 0
+            
+            total_debit = total_earning_salary_items + total_basic_salaries + total_tax_relief + total_employer_ssnit
+            total_credit = bank_balance + total_deduction_salary_items + total_credit_unions + total_loans + total_employee_ssnit + total_tax + total_employer_ssnit
+
+            # print(total_salary_items)
+
+            # for si in salary_items:
+            #     pprint(si)
+
+            pprint(f"{total_debit} - {total_credit}")
+            if Decimal(total_debit) == Decimal(total_credit):
+                reconcile_status += 1
+
+            # pprint(payroll_items)
+
+            bank_totals.append({
+                'bank_name':bank.bank_name,
+                'bank_balance':bank_balance,
+                'earning_salary_items': list(earning_salary_items),
+                'deduction_salary_items': list(deduction_salary_items),
+                'credit_unions': list(credit_unions),
+                'loans': list(loans),
+                'total_employee_ssnit': total_employee_ssnit,
+                'total_employer_ssnit': total_employer_ssnit,
+                'total_earning_salary_items': total_earning_salary_items,
+                'total_deduction_salary_items': total_deduction_salary_items,
+                'total_loans': total_loans,
+                'total_credit_unions': total_credit_unions,
+                'total_basic_salaries': total_basic_salaries,
+                'total_tax':total_tax,
+                'total_tax_relief':total_tax_relief,
+                'total_debit':total_debit,
+                'total_credit':total_credit
+
+            })
+            total_vouchers += 1
+
+        # pprint(bank_totals)
+        context['transactions'] = bank_totals
+        context['total_vouchers'] = total_vouchers
+        context['reconcile_status'] = reconcile_status
+        print(f"{total_vouchers} {reconcile_status}")
+        return context
+
+
+    

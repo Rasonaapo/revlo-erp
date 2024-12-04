@@ -9,6 +9,7 @@ from PIL import Image
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django_quill.fields import QuillField
+from django.db.models import Index
 
 User = get_user_model()
 
@@ -90,7 +91,7 @@ class Employee(models.Model):
     )
     employment_type = models.CharField(max_length=12, choices=EMPLOYMENT_TYPE, default='full_time')
     designation = models.ForeignKey('Designation', null=True, on_delete=models.SET_NULL, related_name='employees')
-
+    tax_relief = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Tax Relief")
     # Custom Manager
     objects = EmployeeManager()
     
@@ -125,7 +126,11 @@ class Employee(models.Model):
 
     class Meta:
         unique_together = ('id_type', 'id_number')
-    
+        indexes = [
+            Index(fields=['first_name', 'last_name'], name='name_idx'),
+            Index(fields=['email'], name='email_idx'),
+            Index(fields=['phone_number'], name='phone_number_idx'),
+        ]  
 
     def get_age(self):
         """Calculate the employee's age based on their date of birth."""

@@ -51,6 +51,30 @@ urlpatterns += [
       path('credit-unions/<int:pk>/delete/', delete_credit_union, name='creditunion-delete'),
       path('credit-unions/<int:pk>/detail/', CreditUnionDetailView.as_view(), name='creditunion-detail'),
       path('credit-unions/api/', CreditUnionListApiView.as_view(), name='creditunion-list-api'),
-      path('credit-unions/<int:pk>/set-employee-detail/', CreditUnionSetEmployeeDetailView.as_view(), name='creditunion-set-details'),
-  
+      path('credit-unions/<int:pk>/set-employee-detail/', CreditUnionSetEmployeeDetailView.as_view(), name='creditunion-set-details'),  
+]
+
+# Payroll
+urlpatterns += [
+      path('process-payroll/', PayrollCreateView.as_view(), name='payroll-add'),
+      path('', PayrollListView.as_view(), name='payroll-list'),
+      path('payrolls/api/', PayrollListApiView.as_view(), name='payroll-list-api'),
+      path('<int:pk>/delete/', delete_payroll, name='payroll-delete'),
+      path('<int:pk>/detail/', PayrollDetailView.as_view(), name='payroll-detail'),
+      path('payslips/', PayrollPayslipListView.as_view(), name='payroll-payslip'),
+      path('print-payslip/<str:uri_params>/', generate_payslip, name='generate-payslip'),
+      path('<int:pk>/initiate-payment-vouchers/', PayrollVoucherDetailView.as_view(), name='payroll-voucher'),
+    
+
+]
+
+# Bank
+urlpatterns += [
+    path('banks/', BankListView.as_view(), name='bank-list'),
+    path('banks/add/', BankCreateView.as_view(), name='bank-add'),
+    path('banks/<int:pk>/update/', BankUpdateView.as_view(), name='bank-update'),
+    path('banks/api/', BankListApiView.as_view(), name='bank-list-api'),
+    path('banks/<int:pk>/employees/', BankEmployeeDetailView.as_view(), name='bank-employee'),
+    path('banks/<int:pk>/delete/', delete_bank, name='bank-delete'),
+
 ]

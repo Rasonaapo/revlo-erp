@@ -14,6 +14,8 @@
                 <p class="text-muted">@{{ employee.job.job_title}} ({{ employee.get_employment_type_display }})</p>
                 {% comment %} <p class="text-muted"><i class="mdi mdi-office-building"></i> {{ employee.job.department }} Dept.</p> {% endcomment %}
 
+                <a href="{% url 'employee-update' employee.id %}" title="Edit {{ employee }}"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
                 <h5 class="mb-3 mt-4 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Personal Information</h5>
 
                 <div class="text-start mt-3">

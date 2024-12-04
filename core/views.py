@@ -6,6 +6,10 @@ from core.models import CustomUser
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required, permission_required
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @never_cache
 def index(request):
     if request.user.is_authenticated:
@@ -55,3 +59,13 @@ def user_profile(request):
 
 def disclaimer(request):
     return HttpResponse('Disclaimer here')
+
+
+def test_logging_view(request):
+    logger.debug("This is a DEBUG message.")
+    logger.info("This is an INFO message.")
+    logger.warning("This is a WARNING message.")
+    logger.error("This is an ERROR message.")
+    logger.critical("This is a CRITICAL message.")
+
+    return HttpResponse("Logging Test")

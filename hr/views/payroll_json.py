@@ -1,5 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from hr.models.payroll import SalaryGrade, Tax, SalaryItem, Loan, CreditUnion
+from django.contrib.auth.decorators import login_required, permission_required
+
+from hr.models.payroll import SalaryGrade, Tax, SalaryItem, Loan, CreditUnion, Payroll, Bank
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 from datetime import date
@@ -110,6 +112,7 @@ class SalaryItemListApiView(LoginRequiredMixin, BaseDatatableView):
             )
         return qs
 
+@login_required
 def load_tax(request):
         today = timezone.now()
         # Let's query for the current year's tax setup from GRA setup
@@ -120,13 +123,14 @@ def load_tax(request):
             return JsonResponse(container, safe=False)
         else:
             return JsonResponse(container, safe=False)
-
+@login_required
 def test_tax(request, **kwargs):
     amount = float(kwargs['amount'])
     year = timezone.now().year
     tax = Tax.calculate_tax(year, amount)
     return JsonResponse(tax, safe=False)
 
+@login_required
 def load_salary_items(request):
     data = [{'id':'Basic', 'name':'BASIC'}]
     # load all the salary items and sort out those with expires on to ensure they're not expired already
@@ -223,3 +227,74 @@ class CreditUnionListApiView(LoginRequiredMixin, BaseDatatableView):
                 Q(union_name__icontains=search)
             )
         return qs
+    
+class PayrollListApiView(LoginRequiredMixin, BaseDatatableView):
+    model = Payroll
+    columns = ['process_month', 'process_year', 'description', 'pv_count', 'posted', 'condition', 'employee_count', 'employee_error', 'created_at']
+
+    def render_column(self, row, column):
+        if column == 'created_at':
+            return row.created_at.strftime('%d %b, %Y')  # Format the created_at field
+        
+        if column == 'process_month':
+            return row.get_process_month_display()
+        
+        if column == 'condition':
+            return row.get_condition_display() 
+        
+        if column == 'employee_count':
+            return row.employee_count
+        
+        if column == 'employee_error':
+            return row.employee_error
+        
+        if column == 'pv_count':
+            # for now return 'N/A', this will be dynamically calculated from the Transaction table 
+            return 'N/A'
+        
+        if column == 'posted':
+            return row.posted
+            # In the future, we will add the total posted if not  all pv's are posted
+        return super().render_column(row, column)
+    
+    def filter_queryset(self, qs):
+        search = self.request.GET.get('search[value]', None)
+        if search:
+            qs = qs.filter(
+                Q(process_month__icontains=search) |
+                Q(process_year__icontains=search) |
+                Q(description__icontains=search)
+            )
+        return qs
+    
+    def get_initial_queryset(self):
+        return Payroll.objects.annotate(employee_count=Count('items__employee', distinct=True), employee_error=Count('errors__employee', distinct=True))
+            
+class BankListApiView(LoginRequiredMixin, BaseDatatableView):
+    model = Bank 
+    columns = ['bank_name', 'employee_count', 'created_at']
+
+    def render_column(self, row, column):
+        if column == 'created_at':
+            return row.created_at.strftime('%d %b, %Y')
+        
+        if column == 'employee_count':
+            return row.employee_count or '-'
+        
+        return super().render_column(row, column)
+
+    def get_initial_queryset(self):
+        return Bank.objects.all().annotate(employee_count=Count('employees'))
+    
+    def filter_queryset(self, qs):
+        # get the value from search input
+        search = self.request.GET.get('search[value]', None)
+        if search:
+            qs = qs.filter(
+                Q(bank_name__icontains=search) |
+                Q(employees__first_name__icontains=search) |
+                Q(employees__last_name__icontains=search)
+            )
+ 
+        return qs
+        

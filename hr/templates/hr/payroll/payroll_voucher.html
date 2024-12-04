@@ -1,0 +1,171 @@
+{% extends 'core/base.html' %} 
+{% load static %}
+
+{% load humanize %}
+{% block content %}
+<div class="row">
+    <div class="col-lg-1"></div>
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-body">
+                <p>Below are the expense transaction(s) that will be raised by the system</p>
+
+                <form action="">
+                    {% for trans in transactions %}
+                    <h5>{{ forloop.counter }}) {{ trans.bank_name }}</h5>
+
+                        <table class="table" width="100%">
+                            <tr>
+                                <td width="50%">
+                                  <span>Accounts To Debit</span>
+                                </td>
+                                <td width="50%">
+                                 <span>Accounts To Credit</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <!-- debit side-->
+                                    <table width="100%" >
+                                      <tr>
+                                        <th><span style="text-decoration: underline;">Account Description</span></th>
+                                        <th><span style="text-decoration: underline;">Account Type</span></th>
+                                        <th><span style="text-decoration: underline;">Debit</span></th>
+                                      </tr>
+                                      <!-- basic salary -->
+                                      <tr>
+                                        <td>Basic Salary</td>
+                                        <td>Exp. </td>
+                                        <td>{{ trans.total_basic_salaries|intcomma }}</td>
+                                      </tr>
+                                      <!-- earnings -->
+                                        {% if trans.earning_salary_items %}
+                                            {% for esi in trans.earning_salary_items %}
+                                            <tr>
+                                                <td>{{ esi.salary_item__alias_name }}</td> 
+                                                <td>Exp. </td>
+                                                <td>{{ esi.total|intcomma }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% endif %}      
+
+                                      <!-- employer ssnit expense -->
+                                      <tr>
+                                        <td>Employer SSNIT</td>
+                                        <td>Exp.</td>
+                                        <td>{{ trans.total_employer_ssnit|intcomma }}</td>
+                                      </tr>
+
+                                    </table>
+                                </td>
+
+                                <td>
+                                    <!-- credit side -->
+                                    <table width="100%" >
+                                        <tr>
+                                          <th><span style="text-decoration: underline;">Account Description</span></th>
+                                          <th><span style="text-decoration: underline;">Account Type</span></th>
+                                          <th><span style="text-decoration: underline;">Credit</span></th>
+                                        </tr>
+                                        <!-- bank -->
+                                        <tr>
+                                          <td>{{ trans.bank_name }}</td>
+                                          <td>Cash Equ.</td>
+                                          <td>{{ trans.bank_balance|intcomma}}</td>
+                                        </tr>
+                                        <!-- Tax payable-->
+                                        <tr>
+                                            <td>Income Tax </td>
+                                            <td>A/c Payables</td>
+                                            <td>{{ trans.total_tax|intcomma}}</td>
+                                          </tr>
+                                        <!-- employee ssnit -->
+                                        <tr>
+                                            <td>Employee SSNIT</td>
+                                            <td>A/c Payables</td>
+
+                                            <td>{{ trans.total_employee_ssnit|intcomma}}</td>
+                                          </tr>
+                                        <!-- employer ssnit -->
+                                        <tr>
+                                            <td>Employer SSNIT</td>
+                                            <td>A/c Payables</td>
+
+                                            <td>{{ trans.total_employer_ssnit|intcomma}}</td>
+                                          </tr>
+                                        <!-- loans-->
+                                         {% if trans.loans %}
+                                           {% for loan in trans.loans %}
+                                             <tr>
+                                                <td>{{ loan.loan_type }} </td>
+                                                <td>A/c Payables</td>
+                                                <td>{{ loan.total|intcomma }}</td>
+                                             </tr>
+                                           {% endfor %}
+                                         {% endif %}
+                                        <!-- credit unions -->
+                                        {% if trans.credit_unions %}
+                                        {% for cu in trans.credit_unions %}
+                                          <tr>
+                                             <td>{{ cu.credit_union__union_name }}</td> 
+                                             <td>A/c Payables</td>
+
+                                             <td>{{ cu.total|intcomma }}</td>
+                                          </tr>
+                                        {% endfor %}
+                                      {% endif %}   
+                                      <!-- deduction salary item -->  
+                                      {% if trans.deduction_salary_items %}
+                                      {% for dsi in trans.deduction_salary_items %}
+                                        <tr>
+                                           <td>{{ dsi.salary_item__alias_name }} </td> 
+                                           <td>A/c Payables</td>
+
+                                           <td>{{ dsi.total|intcomma }}</td>
+                                        </tr>
+                                      {% endfor %}
+                                    {% endif %}                                                                           
+                                      </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><span style="float: right; margin-right: 10%;">TOTAL DEBIT: {{ trans.total_debit|intcomma }}</span></th>
+                                <th><span style="float: right; margin-right:10%">TOTAL CREDIT: {{ trans.total_credit|intcomma }}
+                                    {% if trans.total_debit == trans.total_credit %}
+                                        <span style="font-size: large;" class="text-success"><i class="far fa-check-circle"></i></span>
+                                    {% else %}
+                                        <span style="font-size: large;" class="text-danger"><i class="fas fa-times-circle"></i></span>
+                                    {% endif %}
+                                </span></th>
+                            </tr>
+
+                        </table>
+                    {% endfor %}
+                        <!-- action buttons -->
+                         <p>
+                            {% if reconcile_status > 0 %}
+                               <center>
+                                <p>
+                                    {% if reconcile_status != total_vouchers %}
+                                    <i class="fas fa-info-circle text-info" style="font-size: larger;"></i> 
+                                    <span> <span class="text-blue">{{ reconcile_status }}</span> out of <span class="text-success">{{ total_vouchers }}</span> <span class="text-muted">transaction(s) shall be initiated when clicked on the button below!</span></span>
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'payroll-list' %}">
+                                    <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                                </a>                    
+                                <button type="submit" id="save-btn" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Initiate Payroll Vouchers</button>  
+                               </center>
+                            {% else %}
+                               <center><i class="fas fa-info-circle" style="font-size: larger;"></i> <span class="text-danger">Oops, it appears none of the above transaction(s) is balanced, rectify and re-run payroll</span></center>
+                            {% endif %}
+                         </p>
+         
+
+       
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

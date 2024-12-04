@@ -106,8 +106,17 @@
                         </div>
                     </div>
 
-                    <div class="row">
+                    <div class="row mb-3">
+                        <div class="col-lg-6">
+                            {{ form.designation|as_crispy_field }}
+                        </div>
                         <div class="col-md-6 mb-3">
+                            {{ form.tax_relief|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-12">
                             <div class="form-group">
                                 <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
                                 <select class="form-control select2-multiple" data-toggle="select2" multiple="multiple" id="{{ form.skills.id_for_label }}" name="{{ form.skills.name }}" data-placeholder="Choose skills...">
@@ -119,13 +128,13 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="col-lg-6">
-                            {{ form.designation|as_crispy_field }}
-
-                        </div>
                     </div>
+
+
                     
                     <span class="text-mute text-primary mt-4">National ID Info</span>
+
+
                     <div class="row mb-2">                 
                         <div class="col-md-6">
                             {{ form.id_type|as_crispy_field }}

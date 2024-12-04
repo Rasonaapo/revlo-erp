@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django import forms
-from ..models.payroll import SalaryItem, Loan, CreditUnion
+from ..models.payroll import SalaryItem, Loan, CreditUnion, Payroll
 from ..models.employee import Employee
 from datetime import date
 
@@ -129,5 +129,29 @@ class CreditUnionForm(forms.ModelForm):
         
         return cleaned_data
 
+class PayrollForm(forms.ModelForm):
+    class Meta:
+        model = Payroll
+        exclude = ['created_at', 'updated_at', 'active', 'posted']
+        widgets = {
+            'process_year':forms.TextInput(
+                attrs={'data-date-format': "yyyy", "data-provide":"datepicker", "data-date-min-view-mode":"2", 'class':'year-picker'}
+            ),
+            'description':forms.Textarea(
+                attrs={'rows':2}
+            )
+            
+        }
+    def __init__(self, *args, **kwargs):
+        super(PayrollForm, self).__init__(*args, **kwargs)
+
+        # get active employees for applicable to and excluded from fields
+        active_employees = Employee.objects.active()
+        self.fields['applicable_to'].queryset = active_employees
+        self.fields['excluded_from'].queryset = active_employees
+        self.fields['applicable_to'].help_text = (
+            "Note: 'Applicable To' and 'Excluded From' are mutually exclusive. "
+            "You cannot select the same employee in both fields."
+        )
 
     

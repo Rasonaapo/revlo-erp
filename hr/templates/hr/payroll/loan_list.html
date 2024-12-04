@@ -140,12 +140,18 @@
                  const deleteURL = `{% url 'loan-delete' 0 %}`.replace('0', id)
                  const detailURL = `{% url 'loan-detail' 0 %}`.replace('0', id)
                  
+                 console.log(row.status.status)
+                 let updateLink = ''
+                 let deleteLink = ''
+                 if(row.status.status != 'Active'){
+                    updateLink =  `<a href="${updateURL}" title="Edit loan"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>`
+                    deleteLink = `<a href="${deleteURL}" title="Delete loan"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`
+                }
                     return `
-                           <a href="${updateURL}" title="Edit loan"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
-                          
+                           ${updateLink}
                            <a href="${detailURL}" title="View loan and repayment history"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-history"></i></button></a>
-
-                           <a href="${deleteURL}" title="Delete loan"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+                           ${deleteLink}
+                           `
     
                 }},
             ],

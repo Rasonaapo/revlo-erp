@@ -155,6 +155,13 @@
               </a>
               <div class="collapse" id="menuMultilevel3">
                 <ul class="sub-menu">
+                 
+                  <li class="menu-item">
+                    <a href="{% url 'bank-list' %}" class="menu-link">
+                      <span class="menu-text">Banks</span>
+                    </a>               
+                  </li>
+
                   <li class="menu-item">
                     <a href="{% url 'salarygrade-list' %}" class="menu-link">
                       <span class="menu-text">Grades</span>
@@ -182,6 +189,24 @@
                   <li class="menu-item">
                     <a href="{% url 'creditunion-list' %}" class="menu-link">
                       <span class="menu-text">Credit Unions</span>
+                    </a> 
+                  </li>
+
+                  <li class="menu-item">
+                    <a href="{% url 'payroll-list' %}" class="menu-link">
+                      <span class="menu-text">Payrolls</span>
+                    </a> 
+                  </li>
+
+                  <li class="menu-item">
+                    <a href="{% url 'payroll-payslip' %}" class="menu-link">
+                      <span class="menu-text">Payslips</span>
+                    </a> 
+                  </li>
+
+                  <li class="menu-item">
+                    <a href="{% url 'payroll-add' %}" class="menu-link">
+                      <span class="menu-text">Process Payroll</span>
                     </a> 
                   </li>
 

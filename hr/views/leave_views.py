@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponse
 from hr.models.employee import Employee, Department
 from django_datatables_view.base_datatable_view import BaseDatatableView
@@ -100,6 +101,7 @@ class LeaveTypeUpdateView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, f"{self.get_object().name} leave type updated successfully")
         return super().form_valid(form)
 
+@login_required
 def delete_leave_type(request, pk):
     leave_type = LeaveType.objects.get(id=pk)
 
@@ -441,7 +443,7 @@ class PublicHolidayUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
     
         
-
+@login_required
 def delete_holiday(request, pk):
  holiday = PublicHoliday.objects.get(id=pk)
  if request.method == "POST":

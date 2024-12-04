@@ -1,0 +1,230 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/bootstrap-datepicker/css/bootstrap-datepicker.min.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/sweetalert2/sweetalert2.min2.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/bootstrap-datepicker/js/bootstrap-datepicker.min.js' %}"></script>
+{% endblock %}
+
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+{% block content %}
+
+<div class="row" id="error" style="display: none;">
+    <div class="col-lg-12" >
+        <div class="alert alert-warning bg-warning text-white border-0" role="alert">
+            <ul id="error-list">
+
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST" id="save-form">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-lg-2">
+                            {{ form.process_month|as_crispy_field}}
+                        </div>
+                        <div class="col-lg-2">
+                            {{ form.process_year|as_crispy_field}}
+                        </div>
+                        <div class="col-lg-2">
+                            {{ form.payment_rate|as_crispy_field}}
+                        </div>
+                        <div class="col-lg-2">
+                            {{ form.condition|as_crispy_field}}
+                        </div>
+                        <div class="col-lg-4">
+                            {{ form.description|as_crispy_field}}
+                        </div>
+                    </div>
+                    <hr>
+                    <span class="text-mute text-info">Filters (Optional)</span>
+                    <div class="row mb-3">
+                        <div class="col-lg-3">
+                            {{ form.step|as_crispy_field }}
+                        </div>
+                        <div class="col-lg-3">
+                            {{ form.salary_grade|as_crispy_field }}
+                        </div>
+                        <div class="col-lg-3">
+                            {{ form.designation|as_crispy_field }}
+                        </div>
+                        <div class="col-lg-3">
+                            {{ form.department|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-lg-6">
+                            {{ form.applicable_to|as_crispy_field }}
+                        </div>
+                        <div class="col-lg-6">
+                            {{ form.excluded_from|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-lg-3">
+                            <a href="{% url 'payroll-list' %}">
+                                <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                              </a>
+                            
+                            <button type="submit" id="save-btn" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Process Payroll</button>  
+
+                        </div>
+                        <div class="col-lg-7" id="error-option" style="display: none;">
+                            {{ form.error_mode|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        $('.select, .selectmultiple').select2();
+
+        function scrollToError() {
+            $('html, body').animate({
+                scrollTop: $('#error').offset().top - 20 // Adjust this offset as needed
+            }, 800); // Adjust animation speed (800ms in this case)
+        }
+
+
+
+        $('.year-picker').datepicker({
+            format:"yyyy",
+            autoclose:true,
+        })
+
+        $('#save-form').submit(function (event) {
+
+             // create an AJAX call
+             event.preventDefault()
+             var form = $(this);
+             var url = form.data("action");  // Retrieve the URL from data-action attribute
+             var formData = new FormData(this)
+
+              $.ajax({
+                    data: formData, // get the form data
+                    type: form.attr('method'), // GET or POST
+                    processData: false,  // Prevent jQuery from processing the data
+                    contentType: false,  // Prevent jQuery from setting the content type
+                    url: url,
+                    beforeSend: function(){
+                     //$('#login-spinner').show();
+                    $('#save-btn').html(`Processing... <i class="fas fa-spinner ml-1"></i>`).attr('disabled', 'yes');
+                    },
+                    // on success
+                    success: function (response) {
+                        const {message, status, option } = response
+                        if(status == 'fail')
+                        {
+                            // enable process buttion
+                           $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Process Payroll`).removeAttr('disabled')
+                           // loop through message and create a list and append to error-list
+                          let listItems = ''
+                           $.each(message, function(index, item){
+                             listItems += `<li> ${item}</li>`
+                             console.log(`${listItems} ${item}`)
+                           })
+                           $('#error-list').empty().html(listItems)
+
+                           // enable the hidden option drop down for admin to choose from..
+                           if(option){
+                            $('#error').show()
+                            $('#error-option').show()
+                            scrollToError()
+                           }else{
+                            $('#error').hide()
+                            $('#error-option').val('strict').hide()
+                           }
+                        }
+
+                        if(status == 'success'){
+
+                            Swal.mixin({
+                            toast: !0,
+                            position: "top-end",
+                            showConfirmButton: !1,
+                            timer: 3e3,
+                            timerProgressBar: !0,
+                            onOpen: function (t) {
+                                t.addEventListener("mouseenter", Swal.stopTimer), t.addEventListener("mouseleave", Swal.resumeTimer);
+                            },
+                            }).fire({ icon: "success", title: message });
+                            setTimeout(function(){
+                                // clear form & close modal, after that load Positions..
+                                location.href = "{% url 'payroll-list' %}"
+
+                            }, 3e3)
+                        }
+                        $('#save-btn').html(`<i class="fe-check-circle me-1"></i> Process Payroll`).removeAttr('disabled')
+
+                    },
+                    // on error
+                    error: function (request, status, error) {
+                        console.log(`${request} ${status} ${error}`)
+                        console.log(request)
+                        // alert the error if any error occured
+                        $('#save-btn').html('<i class="fe-check-circle me-1"></i> Process Payroll').removeAttr('disabled')
+
+                        if(error != 'Bad Request'){
+                            Swal.fire('Error', 'Sorry, an error occured, please try again later or contact system admin', 'error')
+                        }else{
+                            let errorText = '<ul>'
+                                console.log(request.responseJSON.errors)
+
+                                let data = request.responseJSON.errors
+                                console.log(`data: ${data}`)
+
+                                $.each(data, function(index, item){
+                                    console.log(index)
+                                    console.log(item)
+                                    errorText += '<li>'+ '<b>' + index +'</b> - '+ item[0] + '</li>'
+                                })
+                                errorText += '</ul>'
+                                Swal.fire({
+                                        title: "<span style='color:red'>Rectify the ff <strong>error(s)</strong></span>",
+                                        type: "warning",
+                                        html: errorText,
+                                 });
+                         }
+                    }
+                });
+                return false;
+            }); 
+
+    })
+</script>
+{% endblock %}
+
+
+
+

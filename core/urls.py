@@ -13,6 +13,7 @@ urlpatterns = [
 
 
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('logger/', views.test_logging_view, name='logger'),
 
 ]
 

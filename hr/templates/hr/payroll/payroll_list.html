@@ -1,0 +1,132 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                   <p>
+                    <a href="{% url 'payroll-add' %}">
+                        <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                            <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>Process New Payroll
+                        </button>
+                       </a>
+                    </p>
+
+     
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Month</th>
+                              <th>Year</th>
+                              <th>Description</th>
+                              <th>No. PV</th>
+                              <th>PV Post Status</th>
+                              <th>Job Condition</th>
+                              <th>No. Staff</th>
+                              <th>Error Status</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+ 
+        $('.select2, .selectmultiple').select2();
+
+        Number.prototype.format = function(n, x) {
+            var re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')';
+            return this.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,');
+        };
+
+        $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'payroll-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                { "data":"process_month"},
+                { "data": "process_year" },
+                { "data": "description" },
+                { "data": "pv_count", "render": function(data, type, row){
+                    return "N/A"
+                }},
+                { "data": "posted", "render":function(data, type, row){
+                    let label = 'No'
+                    let theme = 'warning'
+                      if(data){
+                        label = 'Yes'
+                        label = 'success'
+                      }
+                      return `<span class='badge bg-${theme}'>${label}</span>`
+
+                } },
+                { "data": "condition" },
+                { "data": "employee_count"},
+                { "data": "employee_error"},
+                { "data": "created_at" },
+
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+                 console.log(id)
+                 const detailURL = `{% url 'payroll-detail' 0 %}`.replace('0', id)
+                 let deleteLink = '';
+                 let errorLink = '';
+
+                 if(row.employee_error != '0'){
+                    
+                    errorLink = `<a href="javascript:;" title="This payroll has some errors with"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fas fa-exclamation"></i></button></a>`
+                    
+                 }
+
+                 if(row.posted == false){
+                    const deleteURL = `{% url 'payroll-delete' 0 %}`.replace('0', id)
+                    
+                     deleteLink = `<a href="${deleteURL}" title="Delete payroll"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+                 }
+                    return `<a href="${detailURL}" title="View payroll detail"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-users"></i></button></a>
+                           ${deleteLink} ${errorLink}`
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+
+        
+
+    })
+</script>
+{% endblock %}

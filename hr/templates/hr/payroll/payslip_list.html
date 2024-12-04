@@ -1,0 +1,147 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <select id="payroll" class="select">
+                            <option value="">--choose payroll --</option>
+                            {% for payroll in payrolls %}
+                                <option value="{{ payroll.id }}">{{ payroll.get_process_month_display }} {{ payroll.process_year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-12" id="tableData">
+       
+                    </div>
+                    <center>
+                        <span style="display: none;" id="payslip-loader" >
+                            <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true"></span>
+                            Loading payslips...
+                        </span>
+                    </center>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        $('.select').select2()
+       
+        Number.prototype.format = function(n, x) {
+            var re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')';
+            return this.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,');
+        };
+
+        // Get payroll ID through on change even listener
+        $('#payroll').on('change', function(){
+            const payrollId = $(this).val()
+            console.log(payrollId)
+            $('#payslip-loader').show()
+
+            // if payroll id is not null
+            if(payrollId){
+                $.ajax({
+                    url:'',
+                    method:'GET',
+                    dataType:'json',
+                    data: {payroll_id: payrollId},
+                    success:function(response){
+                        const employees = response.employees
+
+                        let rows = ''
+                        let rowLine = 1
+                        let table = `
+                        <table class="table" id="payslipTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Employee</th>
+                                    <th>Basic Salary</th>
+                                    <th>Earnings</th>
+                                    <th>Gross Salary</th>
+                                    <th>Income Tax</th>
+                                    <th>SSNIT</th>
+                                    <th>Deductions</th>
+                                    <th>Net Salary</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        `
+                        employees.forEach((data, index) => {
+                            console.log(data)
+                            let { id, employee, employee_id, basic_salary:basicSalary, earning, employee_ssnit:ssnit, tax, deduction, net_salary:netSalary, gross_salary:grossSalary } = data
+                            console.log(employee_id)
+
+                            let uriParam = `${employee_id}_${payrollId}`
+                          
+                            let payslipURI = `{% url 'generate-payslip' 0  %}`.replace('0', uriParam)
+                                console.log(payslipURI) 
+                                  
+                            table += `<tr>
+                                        <th>${rowLine}</th>
+                                        <td>${employee}</td>
+                                        <td>${Number(basicSalary).format(2)}</td>
+                                        <td>${Number(earning).format(2)}</td>
+                                        <td>${Number(grossSalary).format(2)}</td>
+                                        <td>${Number(tax).format(2)}</td>
+                                        <td>${Number(ssnit).format(2)}</td>
+                                        <td>${Number(deduction).format(2)}</td>
+                                        <td>${Number(netSalary).format(2)}</td>
+                                        <td>
+                                        <button title="click to print payslip"  onclick="window.open('${payslipURI}', 'popupWindow', 'width=1250, height=842, scrollbars=yes')" class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-print"></i></button>    
+                                        </td>
+                                    </tr>`
+                            rowLine++
+                        })
+                        table += `</tbody></table>`
+                        $('#tableData').empty().append(table)
+
+                        // Reinitialize the DataTable with new data
+                        $('#payslipTable').DataTable({
+                            paging: false,        // We disable pagination
+                            searching: true,     
+                            ordering: true,     
+                            info: true,          
+                            language: {
+                                search: "Search Staff:", 
+                            },
+                        }); 
+                        
+                    },
+                    error:function(xhr, status, error){
+                        console.error("Error fetching employee payslips:", error)
+                    }
+                })
+                $('#payslip-loader').hide()
+            }
+        })// change..
+
+
+    })
+</script>
+{% endblock %}
