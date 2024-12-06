@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('process_month', models.PositiveIntegerField(verbose_name='Processing Month')),
                 ('process_year', models.PositiveIntegerField(verbose_name='Processing Year')),
-                ('description', models.TextField(blank=True, null=True, verbose_name='Payroll Description')),
+                ('description', models.CharField(max_length=255, blank=True, null=True, verbose_name='Payroll Description')),
                 ('active', models.BooleanField(default=True, verbose_name='Is Active')),
                 ('posted', models.BooleanField(default=False, verbose_name='Is Posted')),
                 ('condition', models.CharField(choices=[('full_time', 'Full Time'), ('part_time', 'Part Time'), ('contractual', 'Contractual'), ('temporary', 'Temporary')], default='full_time', max_length=12, verbose_name='Employment Type')),
