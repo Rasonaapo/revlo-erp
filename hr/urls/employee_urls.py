@@ -81,22 +81,15 @@ urlpatterns +=[
         path('public-holidays/add/', PublicHolidayCreateView.as_view(), name='holiday-add'),
         path('public-holidays/<int:pk>/update/', PublicHolidayUpdateView.as_view(), name='holiday-update'),
         path('public-holidays/<int:pk>/delete/', delete_holiday, name='holiday-delete'),
-
 ]
 
-## Meeting & SMS
+## SMS 
 urlpatterns += [
-    path('meetings/', MeetingListView.as_view(), name='meeting-list'),
-    path('meetings/api/', MeetingAPIView.as_view(), name='meeting-list-api'),
-    path('meetings/<int:pk>/update/', MeetingUpdateView.as_view(), name='meeting-update'),
-    path('meetings/add/', MeetingCreateView.as_view(), name='meeting-add'),
-    path('meetings/<int:pk>/delete/', delete_meeting, name='meeting-delete'),     
-    path('meetings/<int:pk>/detail/', MeetingDetailView.as_view(), name='meeting-detail'),
-    path('meetings/<int:pk>/update-attendance/', update_attendance, name='attendance-update'),
     path('sms-schedules/', SMSListView.as_view(), name='sms-list'),
     path('sms/api/', SMSAPIView.as_view(), name='sms-list-api'),
     path('sms/add/', SMSCreateView.as_view(), name='sms-add'),
     path('sms/<int:pk>/update/', SMSUpdateView.as_view(), name='sms-update'),
     path('sms/<int:pk>/delete/', delete_sms, name='sms-delete'),
     path('sms/<int:pk>/detail/', SMSDetailView.as_view(), name='sms-detail'),
+
 ]

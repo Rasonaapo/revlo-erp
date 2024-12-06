@@ -33,17 +33,11 @@ class DocumentTypeAdmin(admin.ModelAdmin):
 class NationalIDTypeAdmin(admin.ModelAdmin):
     list_display = ('name', )
 
-@admin.register(Meeting)
-class MeetingAdmin(admin.ModelAdmin):
-    list_display = ('subject', 'meeting_date', 'sms_date', 'location', 'status', 'agenda', )
-
 @admin.register(SMS)
 class SMSAdmin(admin.ModelAdmin):
     list_display = ('message', 'sms_date', 'display_sms_job', 'display_sms_department', 'display_sms_grade', 'created_at', 'updated_at', 'status', )
 
-@admin.register(Attendance)
-class AttendanceAdmin(admin.ModelAdmin):
-    list_display = ('meeting', 'employee', 'check_in_time', )
+
 
 # Payroll
 @admin.register(SalaryGrade) 

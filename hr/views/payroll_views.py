@@ -810,7 +810,7 @@ class PayrollCreateView(LoginRequiredMixin, CreateView):
                                 # total_credit += item_amount
 
                             # save this item
-                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='salary_item', dependency=staff_item.salary_item.id, amount=item_amount, entry=item_entry))
+                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='salary_item', dependency=staff_item.salary_item.id, amount=item_amount, entry=item_entry, salary_item=staff_item.salary_item))
 
                     # get this employee credit unions deductions
                     staff_credit_unions = StaffCreditUnion.objects.filter(employee=employee, amount__isnull=False).filter(
@@ -833,7 +833,7 @@ class PayrollCreateView(LoginRequiredMixin, CreateView):
                             # Add monthly deduction to total deduction
                             staff_total_deductions += monthly_deduction
                             # Save credit union
-                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='credit_union', description=staff_credit_union.credit_union.union_name,  amount=monthly_deduction, dependency=staff_credit_union.credit_union.id,  entry='credit'))
+                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='credit_union', description=staff_credit_union.credit_union.union_name,  amount=monthly_deduction, dependency=staff_credit_union.credit_union.id,  entry='credit', credit_union=staff_credit_union.credit_union))
 
                     # get employee loan(s)
                     staff_loans = Loan.objects.filter(employee=employee, status='active', outstanding_balance__gt=0, deduction_end_date__gt=today)
@@ -852,7 +852,7 @@ class PayrollCreateView(LoginRequiredMixin, CreateView):
                             # add repayment amount total deduction
                             staff_total_deductions += repayment_amount
                             # save individual loan
-                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='loan', description=loan.get_loan_type_display(),  amount=repayment_amount, dependency=loan.id,  entry='credit'))
+                            bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='loan', description=loan.get_loan_type_display(),  amount=repayment_amount, dependency=loan.id,  entry='credit', loan=loan))
                            
                             # total_credit += repayment_amount
                     # save earnings and deductions
@@ -890,7 +890,7 @@ class PayrollCreateView(LoginRequiredMixin, CreateView):
                    
 
                     # save bank 
-                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='bank', amount=net, dependency=employee.bank.id, entry='credit'))
+                    bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='bank', amount=net, dependency=employee.bank.id, entry='credit', bank=employee.bank))
                     # Save payroll items which are not dynamically gotten from loop
                     # save basic salary
                     bulk_entries.append(PayrollItem(payroll=payroll_instance, employee=employee, item_type='basic_salary', amount=basic_salary,  entry='debit'))
@@ -912,6 +912,10 @@ class PayrollCreateView(LoginRequiredMixin, CreateView):
 
                     """Test double entry"""
                     logger.info("Double entry check, total credit against total debit")
+                    
+                    # temporarily add additonal debit to joyce item for demonstration purposes..
+                    if employee.id == 7:
+                        total_debit += 1
 
                     if total_credit != total_debit:
                         msg = f"{employee}: Total credit {total_credit} differs from debit {total_debit}"
@@ -1160,6 +1164,7 @@ def generate_payslip(request, uri_params):
     tax = {}; ssnit = {}; loans = []; unions = []; other_deductions = []
 
     for item in payroll_items:
+        pprint(vars(item))
         item_type = item.item_type
         entry = item.entry
         amount = item.amount

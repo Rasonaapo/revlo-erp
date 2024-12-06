@@ -25,7 +25,8 @@ urlpatterns = [
 urlpatterns += [
     path('hr/', include('hr.urls')),
     path('', include('core.urls')),
-    path('hr/payroll/', include('hr.urls.payroll_urls'))
+    path('hr/payroll/', include('hr.urls.payroll_urls')),
+    path('administration/', include('administration.urls')),
 
 ]
 

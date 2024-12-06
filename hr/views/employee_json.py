@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from hr.models.employee import Employee, Department, Meeting, SMS, Designation, Skill, Job, JobHistory
+from hr.models.employee import Employee, Department, SMS, Designation, Skill, Job, JobHistory
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 from datetime import date
@@ -297,49 +297,9 @@ class DesignationListApiView(LoginRequiredMixin, BaseDatatableView):
 
         return qs
 
-    
-class MeetingAPIView(LoginRequiredMixin, BaseDatatableView):
-    model = Meeting
-    columns = ['id', 'subject', 'meeting_date', 'sms_date', 'location', 'attendees', 'status', 'created_at']
-
-    def render_column(self, row, column):
-        if column == 'meeting_date':
-            return row.meeting_date.strftime('%d %b, %Y %I:%M %p')
-        if column == 'sms_date':
-            return row.sms_date.strftime('%d %b, %Y %I:%M %p')
-        if column == 'created_at':
-            return row.created_at.strftime('%d %b, %Y')
-        if column == 'venue':
-            return row.location
-        if column == 'attendees':
-            return len(row.get_meeting_employees())
-        if column == 'status':
-            status = row.status
-            theme = 'danger'
-            if status == 'pending':
-                theme = 'info'
-            elif status == 'on_going':
-                theme = 'success'
-   
-            return {'theme':theme, 'status':row.get_status_display()}
-                
-        return super().render_column(row, column)
-    
-    def get_initial_queryset(self):
-        return Meeting.objects.all()
-    
-    def filter_queryset(self, qs):
-        search = self.request.GET.get('search[value]', None)
-        if search:
-            qs = qs.filter(
-                Q(subject__icontains=search) |
-                Q(location__icontains=search) |
-                Q(status__icontains=search)
-            )
-        return qs
 
 class SMSAPIView(LoginRequiredMixin, BaseDatatableView):
-    model = Meeting
+    model = SMS
     columns = ['id', 'message', 'sms_date', 'status', 'attendees', 'created_at']
 
     def render_column(self, row, column):

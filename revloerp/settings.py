@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'hr.apps.HrConfig',
     'core.apps.CoreConfig',
+    'administration.apps.AdministrationConfig',
     'crispy_forms',
     'crispy_bootstrap4',
     'widget_tweaks',

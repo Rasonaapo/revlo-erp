@@ -84,7 +84,35 @@
           <span class="menu-icon"><i data-feather="airplay"></i></span>
           <span class="menu-text"> Dashboard </span>
         </a>
-      </li>
+      </li> 
+
+      <!-- Operations -->
+
+      <li class="menu-item">
+        <a href="forms-pickers.html#menuMaps" data-bs-toggle="collapse" class="menu-link">
+            <span class="menu-icon"><i data-feather="map"></i></span>
+            <span class="menu-text"> Operations </span>
+            <span class="menu-arrow"></span>
+        </a>
+        <div class="collapse" id="menuMaps">
+            <ul class="sub-menu">
+                <li class="menu-item">
+                    <a href="{% url 'meeting-list' %}" class="menu-link">
+                        <span class="menu-text">Meetings</span>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a class="menu-link">
+                        <span class="menu-text">Business Documents</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </li>
+
+    <!-- HR Menus -->
 
       <li class="menu-item">
         <a
@@ -255,16 +283,12 @@
                 data-bs-toggle="collapse"
                 class="menu-link"
               >
-                <span class="menu-text">Meeting & SMS</span>
+                <span class="menu-text">SMS</span>
                 <span class="menu-arrow"></span>
               </a>
               <div class="collapse" id="menuMultilevel5">
                 <ul class="sub-menu">
-                  <li class="menu-item">
-                    <a href="{% url 'meeting-list' %}" class="menu-link">
-                      <span class="menu-text">Meetings</span>
-                    </a>               
-                  </li>
+
                   <li class="menu-item">
                     <a href="{% url 'sms-list' %}" class="menu-link">
                       <span class="menu-text">SMS Schedules</span>

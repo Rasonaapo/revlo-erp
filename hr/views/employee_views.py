@@ -12,7 +12,7 @@ from django.views.generic.edit import FormMixin
 from hr.models.employee import *
 from django.urls import reverse_lazy
 from django import forms
-from ..forms.employee_forms import JobHistoryForm, EmployeeForm, GuarantorForm, DocumentUploadForm, MeetingForm, SMSForm, JobForm
+from ..forms.employee_forms import JobHistoryForm, EmployeeForm, GuarantorForm, DocumentUploadForm, SMSForm, JobForm
 from django.forms import modelformset_factory
 import pdb
 from django.db.models import Count
@@ -546,139 +546,8 @@ class EmployeeDetailView(LoginRequiredMixin, DetailView):
         context['documents'] = Document.objects.filter(employee=self.get_object())
         return context
 
-# Meeting & SMS
+# SMS
 
-class MeetingListView(LoginRequiredMixin, ListView):
-    model = Meeting
-    template_name = 'hr/meeting/meeting_list.html'
-    context_object_name = 'meeting_list'
-
-    def get_context_data(self, **kwargs):
-        context =  super().get_context_data(**kwargs)
-        context['title'] = 'Meetings'
-        return context
-
-class MeetingCreateView(LoginRequiredMixin, CreateView):
-    models = Meeting
-    template_name = 'hr/meeting/meeting_form.html'
-    form_class = MeetingForm
-    success_url = reverse_lazy('meeting-list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = 'Add Meeting'
-        return context
-    
-    def form_valid(self, form):
-        meeting = form.save(commit=False)
-        meeting.save() # Save to assign and ID to the meeting
-        form.save_m2m()  # Save the many-to-many relationships (job, department, salary_grade)
-        
-        # Use get_meeting_employees to fetch relevant employees
-        employees = meeting.get_meeting_employees()
-
-        for employee in employees:
-            Attendance.objects.create(
-                    meeting=meeting,
-                    employee=employee
-                )
-       
-        messages.success(self.request, f"{meeting} was created successfully")
-        return super().form_valid(form)
-    
-class MeetingUpdateView(LoginRequiredMixin, UpdateView):
-    model = Meeting
-    form_class = MeetingForm
-    template_name = 'hr/meeting/meeting_form.html'
-    context_object_name = 'meeting'
-    success_url = reverse_lazy('meeting-list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = f'Update {self.get_object()}'
-        return context
-    
-    def form_valid(self, form):
-        meeting = form.save(commit=False)
-        meeting.save()
-        form.save_m2m()
-
-        # Clear existing attendance records (important for UpdateView)
-        Attendance.objects.filter(meeting=meeting).delete()
-
-        employees = meeting.get_meeting_employees()
-        for employee in employees:
-            # Create attendance records for each relevant employee
-            Attendance.objects.create(meeting=meeting, employee=employee)
-
-        messages.success(self.request, f"{meeting} was updated successfully")
-        return super().form_valid(form)
-
-def delete_meeting(request, pk):
-    meeting = Meeting.objects.get(id=pk)
-
-    if request.method == 'POST':
-        meeting.delete()
-        messages.success(request, f"{meeting} was successfully deleted")
-        return redirect('meeting-list')
-
-    return render(request, 'core/delete.html', {'obj':meeting, 'title': f'Delete {meeting}?'})
-
-class MeetingDetailView(LoginRequiredMixin, DetailView):
-    model = Meeting
-    context_object_name = 'meeting'
-    template_name = 'hr/meeting/meeting_detail.html'
-
-    def get_context_data(self, **kwargs):
-        context =  super().get_context_data(**kwargs)    
-        meeting = self.get_object()  
-        context['title'] = f"{meeting}"
-
-        # fetch employees from attendance..
-        context['attendees'] = Attendance.objects.filter(meeting=meeting).order_by('check_in_time') 
-
-        # Determine if the meeting is past 
-        return context  
-
-def update_attendance(request, pk):
-    meeting = Meeting.objects.get(id=pk)
-    context = {'title': f"Mark Attendance For {meeting}"}
-
-    # If status is on going or ended, fetch the employees and update their check in time 
-    attendances = Attendance.objects.filter(meeting=meeting).order_by('check_in_time')
-    if meeting.status == 'on_going' or meeting.status == 'ended':
-        context.update({'attendances': attendances})
-    
-    if request.method == "POST":
-        try:
-
-            with transaction.atomic(): # Use transactions since we are doing DB operations in bulk
-                # Loop over each attendance record from template and update if provided
-                updates = 0
-                for attendance in attendances:
-                    check_in_time_key = f"check_in_time_{attendance.id}"  # Match the input name from the template   
-                    check_in_time = request.POST.get(check_in_time_key) # Get the time value from the POST data
-                    
-                    try:
-                        if check_in_time: 
-                            attendance.check_in_time = check_in_time
-                            attendance.save()
-                            updates += 1
-                    except DatabaseError as e:
-                        return JsonResponse({'status':'fail', 'message':f"An error occured while updating {attendance.employee} record, try again later"})
-                if updates:
-                    label ="1 record was " if updates == 1 else f"{updates} records were "
-                    return JsonResponse({'status':'success', 'message':f"{label} successfully updated"})
-                else:
-                    return JsonResponse({'status':'fail', 'message':"Nothing was updated"})
-
-        except IntegrityError as e:
-            return JsonResponse({'status': 'fail', 'message': 'An integrity error occurred. Please try again.'})
-
-        except DatabaseError as e:
-            return JsonResponse({'status': 'fail', 'message': 'A database error occurred. Please contact support if this continues.'})
-         
-    return render(request, 'hr/meeting/update_attendance.html', context)
 
 # SMS
 class SMSListView(LoginRequiredMixin, ListView):
