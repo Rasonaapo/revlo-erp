@@ -1,0 +1,57 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-5 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+                 
+                    <a href="{% url 'document-update' document.id %}" title="Edit document"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'document-add'  %}" title="Add document"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-plus"></i></button></a>
+
+                    <a href="{% url 'document-list' %}" title="View documents"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Business Document Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Document Name :</strong> <span class="ms-2">{{ document.document_name }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Associated Entity :</strong> <span class="ms-2">{{ document.associated_entity|default:'N/A' }} </span></p>
+
+
+                    <p class="text-muted mb-2 font-13"><strong>Expiration Date :</strong> <span class="ms-2">{{ document.expiration_date|date:'d M, Y' }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Vendor :</strong> <span class="ms-2">{{ document.vendor.name }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Notes :</strong> <span class="ms-2">{{ document.notes.html|safe }} </span></p>
+                    
+
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ document.created_at|date:'d M, Y h:i A' }} </span></p>  
+   
+
+            </div>
+        </div>
+    </div>
+    <!-- Section to display files associated with this document -->
+    <div class="col-lg-6 col-xl-6">
+        <div class="card">
+            <div class="card-body">
+                {% if document_files %}
+                <a href="{% url 'document-upload' document.id %}" title="Upload new files for this business document"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-file-upload"></i></button></a>
+
+                  <ul>
+                    {% for doc_file in document_files %}
+                        <li>{{ doc_file.document_category }} <a href="{{ doc_file.document_file.url }}" title="{{ doc_file.document_file.url }}"><i class="fas fa-file-download"></i> Download</a> <a href="{% url 'document-file-delete' doc_file.id %}" class="text-danger" title="Delete {{ doc_file.document_file.url }}"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                 <p>There are no files for this document currently </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+ </div>
+{% endblock %}

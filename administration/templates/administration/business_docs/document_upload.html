@@ -1,0 +1,70 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+{% endblock %}
+
+{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <a href="{% url 'document-add'  %}" title="Add document"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-plus"></i></button></a>
+
+                <a href="{% url 'document-list' %}" title="View documents"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+
+                <a href="{% url 'document-detail' business_document.id %}" title="Business document detail"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class=" fas fa-house-user"></i></button></a>
+
+                <form action="" class="mt-2" method="POST" enctype="multipart/form-data">
+
+                   {% csrf_token %}
+                   {{ form.as_p }}
+
+                   <p class="mt-2">
+                    <a href="{% url 'document-list' %}">
+                        <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                    </a>
+                    <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                </p>     
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                {% if document_files %}
+
+                  <ul>
+                    {% for doc_file in document_files %}
+                        <li>{{ doc_file.document_category }} <a href="{{ doc_file.document_file.url }}" title="Download {{ doc_file.document_file.url }}"><i class="fas fa-file-download"></i> Download</a> <a href="{% url 'document-file-delete' doc_file.id %}" class="text-danger" title="Delete {{ doc_file.document_file.url }}"><i class="fas fa-trash-alt"></i> Delete</a> </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                 <p>There are no files for this document currently </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        
+        $('.select2').select2()
+
+    })
+</script>
+{% endblock %}

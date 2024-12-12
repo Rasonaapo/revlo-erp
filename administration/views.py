@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .forms import MeetingForm
-from .models import Meeting, Attendance
+from .forms import MeetingForm, VendorForm, BusinessDocumentForm, BusinessDocumentUploadForm
+from .models import Meeting, Attendance, Vendor, BusinessDocument, BusinessDocumentFile
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.generic import ListView, CreateView, UpdateView, DetailView 
@@ -9,8 +9,10 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.db import transaction, DatabaseError, IntegrityError 
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Count
 from django_datatables_view.base_datatable_view import BaseDatatableView
+from django.views.generic.edit import FormMixin
+
 
 # Create your views here.
 
@@ -185,3 +187,271 @@ def update_attendance(request, pk):
             return JsonResponse({'status': 'fail', 'message': 'A database error occurred. Please contact support if this continues.'})
          
     return render(request, 'administration/meeting/update_attendance.html', context)
+
+class VendorListView(LoginRequiredMixin, ListView):
+    model = Vendor 
+    template_name = 'administration/vendor/vendor_list.html'
+    context_object_name = 'vendor_list'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Vendors'
+        return context 
+
+class VendorAPIView(LoginRequiredMixin, BaseDatatableView):
+    model = Vendor 
+    columns = ['id', 'name', 'phone_number', 'email', 'address', 'created_at']
+
+    def render_column(self, row, column):
+        if column == 'created_at':
+            return row.created_at.strftime('%d %b, %Y')
+        
+        if column == 'phone_number':
+           return row.format_phone_number() if row.phone_number else 'N/A'
+        
+        if column == 'address':
+            address = row.address
+            if address:
+                return f"{address[:30]}..." if len(address) > 30 else address
+            else:
+                return 'N/A'
+            
+        return super().render_column(row, column)
+    
+    def filter_queryset(self, qs):
+        search = self.request.GET.get('search[Value]', None)
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(phone_number__icontains=search) |
+                Q(email__icontains=search) |
+                Q(address__icontains=search) |
+                Q(notes__icontains=search)
+            )
+        return qs
+    
+    def get_initial_queryset(self):
+        return Vendor.objects.all()
+    
+class VendorCreateView(LoginRequiredMixin, CreateView):
+    model = Vendor 
+    template_name = 'administration/vendor/vendor_form.html'
+    form_class = VendorForm 
+    success_url = reverse_lazy('vendor-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Add Vendor'
+        context['use_quill'] = True
+        return context
+    
+    def form_valid(self, form):
+
+        messages.success(self.request, f"Vendor [{form.instance.name}] successfully created")
+        return super().form_valid(form)
+    
+class VendorUpdateView(LoginRequiredMixin, UpdateView):
+    model = Vendor
+    template_name = 'administration/vendor/vendor_form.html'
+    form_class = VendorForm 
+    success_url = reverse_lazy('vendor-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"Update {self.get_object()}"
+        context['use_quill'] = True
+        return context
+    
+    def form_valid(self, form):
+
+        messages.success(self.request, f"Vendor [{self.get_object().name}] successfully updated")
+        return super().form_valid(form)
+
+class VendorDetailView(LoginRequiredMixin, DetailView):
+    model = Vendor 
+    template_name = 'administration/vendor/vendor_detail.html'
+    context_object_name = 'vendor' 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"{self.get_object()}"
+        return context
+
+def delete_vendor(request, pk):
+    from django.http import Http404
+    
+    try:
+        vendor = Vendor.objects.get(id=pk)
+    except Vendor.DoesNotExist:
+        raise Http404('Vendor Does Not Exist')
+    
+    if request.method == "POST":
+        vendor.delete()
+        messages.success(request, f"{vendor} successfully deleted")
+        return redirect(reverse_lazy('vendor-list'))
+
+    return render(request,  'core/delete.html', {'obj':vendor, 'title': f'Delete {vendor}?'})
+
+class DocumentListView(LoginRequiredMixin, ListView):
+    model = BusinessDocument 
+    template_name = 'administration/business_docs/document_list.html'
+    context_object_name = 'document_list'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Business Documents'
+        return context 
+    
+class DocumentAPIView(LoginRequiredMixin, BaseDatatableView):
+    model = BusinessDocument 
+    columns = ['document_name', 'associated_entity', 'expiration_date', 'file_count', 'vendor', 'created_at', 'id']
+
+    def render_column(self, row, column):
+        if column == 'created_at':
+            return row.created_at.strftime('%d %b, %Y')
+        
+        if column == 'vendor':
+            return row.vendor.name if row.vendor else 'N/A'
+        
+        if column == 'expiration_date':
+            return row.expiration_date.strftime('%d %b, %Y')
+        
+        if column == 'file_count':
+            return row.file_count if row.file_count else 'N/A'
+        
+        return super().render_column(row, column)
+    
+    def get_initial_queryset(self):
+        return BusinessDocument.objects.annotate(file_count=Count('document_files'))
+    
+    def filter_queryset(self, qs):
+        search = self.request.GET.get('search[Value]')
+        if search:
+            qs = qs.filter(
+                Q(document_name__icontains=search) |
+                Q(associated_entity__icontains=search) |
+                Q(documents__name__icontains=search) 
+                
+            )
+        return qs
+
+class DocumentCreateView(LoginRequiredMixin, CreateView):
+    model = BusinessDocument
+    template_name = 'administration/business_docs/document_form.html'
+    form_class = BusinessDocumentForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Add Business Document'
+        context['use_quill'] = True
+        return context
+    
+    def form_valid(self, form):
+        document = form.save()
+        messages.success(self.request, f"{document.document_name} successfully created, proceed to upload files")
+        return redirect(reverse_lazy('document-upload', kwargs={'pk':document.id}))
+   
+
+class DocumentUploadDetailView(LoginRequiredMixin, FormMixin, DetailView):
+    model = BusinessDocument
+    template_name = 'administration/business_docs/document_upload.html'
+    context_object_name = 'business_document'
+    form_class = BusinessDocumentUploadForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        business_document = self.get_object()
+        context['title'] = f"Upload File(s) For {business_document}"
+        # get files associated with this document
+        context['document_files'] = BusinessDocumentFile.objects.filter(business_document=business_document)
+        return context
+    
+    # process incoming files 
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # get the form for processing
+        form = self.get_form()
+        if form.is_valid():
+            # Do not commit until we've assign object to form instance..
+            document_file = form.save(commit=False)
+            document_file.business_document = self.object 
+            # final commit
+            document_file.save()
+
+            messages.success(self.request, f"Document uploaded successfully")
+            return redirect(reverse_lazy('document-upload', kwargs={'pk':self.object.pk}))
+        else:
+            return self.form_invalid(form)
+
+    # Handle edge cases for invalid form submissions
+    def form_invalid(self, form):
+        """Handles invalid form submission"""
+        context = self.get_context_data(form=form)
+        messages.error(self.request, "Error: Document could not be uploaded. Please fix the errors below.")
+        return self.render_to_response(context)
+
+class DocumentUpdateView(LoginRequiredMixin, UpdateView):
+    model = BusinessDocument
+    template_name = 'administration/business_docs/document_form.html'
+    context_object_name = 'business_document'
+    form_class = BusinessDocumentForm
+    success_url = reverse_lazy('document-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f"Update {self.get_object()}"
+        context['use_quill'] = True
+        return context 
+
+    def form_valid(self, form):
+        # check if the form has changed its initial data
+        if  not form.has_changed():
+            form.add_error(None, "No changes were detected in the form")
+            return self.render_to_response(self.get_context_data(form=form))
+        
+        messages.success(self.request, f"{self.get_object()} successfully updated")
+        return super().form_valid(form)
+
+def delete_document(request, pk):
+    from django.http import Http404
+
+    try:
+        document = BusinessDocument.objects.get(id=pk)
+    except BusinessDocument.DoesNotExist:
+        raise Http404('Business Document Does Not Exist')
+    
+    if request.method == "POST":
+        document.delete()
+        messages.success(request, f"{document} successfully deleted")
+        return redirect(reverse_lazy('document-list'))
+    
+    return render(request,  'core/delete.html', {'obj':document, 'title': f'Delete {document}?'})
+
+class DocumentDetailView(LoginRequiredMixin, DetailView):
+    model = BusinessDocument 
+    template_name = 'administration/business_docs/document_detail.html'
+    context_object_name = 'document'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        document = self.get_object()
+        context['title'] = f"{document} Detail"
+        # get files associated with this business document...
+        context['document_files'] = BusinessDocumentFile.objects.filter(business_document=document)
+        return context
+    
+def delete_document_file(request, pk):
+    from django.http import Http404
+    try:
+        doc_file = BusinessDocumentFile.objects.get(id=pk)
+        document_id = doc_file.business_document.id
+    except BusinessDocumentFile.DoesNotExist:
+        raise Http404("Business Document File Does Not Exist")
+    
+    if request.method == "POST":
+        doc_file.delete()
+
+        messages.success(request, f"{doc_file} successfully deleted")
+        return redirect(reverse_lazy('document-detail', kwargs={'pk':document_id}))
+    
+    return render(request,  'core/delete.html', {'obj':doc_file, 'title': f'Delete {doc_file}?'})

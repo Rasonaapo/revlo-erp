@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'plugin/libs/multiselect/css/multi-select.css' %}" rel="stylesheet" type="text/css" />
+
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+<script src="{% static 'plugin/libs/multiselect/js/jquery.multi-select.js' %}"></script>
+
+
+{% endblock %}
+
+{% block content %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
+
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form action="" method="POST" id="save-form" novalidate>
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{ form.name|as_crispy_field }}
+                        </div>
+                    </div>     
+
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.phone_number|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-8 mb-2">
+                            {{ form.email|as_crispy_field }}
+                        </div>
+
+                    </div>   
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{ form.address|as_crispy_field }}
+                        </div>
+                    </div> 
+  
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div> 
+
+                    <p class="mt-2">
+                        <a href="{% url 'vendor-list' %}">
+                            <button type="button" class="btn btn-danger rounded-pill waves-effect waves-light m-1"><i class="fe-x me-1"></i> Cancel</button>               
+                        </a>
+                        <button type="submit" class="btn btn-success rounded-pill waves-effect waves-light m-1"><i class="fe-check-circle me-1"></i> Save Record</button>
+                    </p>     
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $('document').ready(function(){
+
+        $('.select2-multiple, .select').select2();
+        
+
+    });
+</script> 
+{% endblock %}

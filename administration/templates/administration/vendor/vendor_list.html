@@ -1,0 +1,96 @@
+{% extends 'core/base.html' %} 
+{% load static %} 
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+{% endblock %}
+
+{% block content %} 
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                   <p>
+                    <a href="{% url 'vendor-add' %}">
+                        <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                            <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Vendor
+                        </button>
+                       </a>
+                    </p>
+
+                    <table id="Table" class="table table-hover dt-responsive nowrap w-100">
+                        <thead>
+                          <tr>
+                              <th>#</th>
+                              <th>Vendor Name</th>
+                              <th>Phone Number</th>
+                              <th>Email</th>
+                              <th>Address</th>
+                              <th>Created on</th>
+                              <th>Actions</th>
+                          </tr>
+                        </thead>
+                      </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function() {
+
+        $('.selectmultiple').select2()
+
+        $('#Table').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'vendor-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null, // Automatically calculate the row number
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                {"data":"name"},
+                { "data": "phone_number" },
+                { "data": "email" },
+                {"data": "address"},
+                { "data": "created_at" },
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                 const id = row.id
+
+                 const updateURL = `{% url 'vendor-update' 0 %}`.replace('0', id)
+                 const deleteURL = `{% url 'vendor-delete' 0 %}`.replace('0', id)
+                 const detailURL = `{% url 'vendor-detail' 0 %}`.replace('0', id)
+                 let updateLink = `<a href="${updateURL}" title="Edit vendor"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>`
+                 let otherLinks = `
+                           <a href="${detailURL}" title="Vendor detail"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class=" fas fa-house-user"></i></button></a>
+                           <a href="${deleteURL}" title="Delete vendor"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;                 
+                 
+                    return `${updateLink}${otherLinks}`
+
+    
+                }},
+            ],
+            "order": [[4, "desc"]]  // Default sorting by "created_at"
+        });
+
+    });
+</script>
+{% endblock %}

@@ -65,12 +65,12 @@
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <div class="form-group">
-                                <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
-                                <select class="form-control select2-multiple" data-toggle="select2" multiple="multiple" id="{{ form.skills.id_for_label }}" name="{{ form.skills.name }}" data-placeholder="Choose skills...">
+                                <label for="{{ form.required_skills.id_for_label }}">{{ form.required_skills.label }}</label>
+                                <select class="form-control select2-multiple" data-toggle="select2" multiple="multiple" id="{{ form.required_skills.id_for_label }}" name="{{ form.required_skills.name }}" data-placeholder="Choose skills...">
                                     {% for category, skills in categorized_skills.items %}
                                     <optgroup label="{{ category|title }}">
                                         {% for skill in skills %}
-                                        <option value="{{ skill.id }}" {% if skill.id in form.skills.value %}selected{% endif %}>
+                                        <option value="{{ skill.id }}" {% if skill in form.initial.required_skills %}selected{% endif %}>  
                                             {{ skill.name }}
                                         </option>
                                         {% endfor %}

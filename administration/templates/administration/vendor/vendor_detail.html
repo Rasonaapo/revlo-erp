@@ -1,0 +1,39 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-5 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+                 
+                    <a href="{% url 'vendor-update' vendor.id %}" title="Edit vendor"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+
+                    <a href="{% url 'vendor-add'  %}" title="Add vendor"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fas fa-plus"></i></button></a>
+
+                    <a href="{% url 'vendor-list' %}" title="View vendors"><button class="btn btn-xs btn-outline-info rounded-pill waves-effect waves-light"><i class="fas fa-list"></i></button></a>
+                    
+                    <h5 class="mb-3 mt-1 text-uppercase bg-light p-2"><i class="mdi mdi-account-circle me-1"></i> Vendor Information</h5>
+
+                    <p class="text-muted mb-2 font-13"><strong>Vendor Name :</strong> <span class="ms-2">{{ vendor.name }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Phone Number :</strong> <span class="ms-2">{{ vendor.format_phone_number }} </span></p>
+
+
+                    <p class="text-muted mb-2 font-13"><strong>Email :</strong> <span class="ms-2">{{ vendor.email|default:'N/A' }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Address :</strong> <span class="ms-2">{{ vendor.address }} </span></p>
+
+                    <p class="text-muted mb-2 font-13"><strong>Notes :</strong> <span class="ms-2">{{ job.notes.html|safe }} </span></p>
+                    
+
+                    <p class="text-muted mb-2 font-13"><strong>Created On :</strong> <span class="ms-2">{{ vendor.created_at|date:'d M, Y h:i A' }} </span></p>  
+   
+
+            </div>
+        </div>
+    </div>
+ </div>
+{% endblock %}

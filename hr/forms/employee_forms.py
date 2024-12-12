@@ -108,6 +108,11 @@ class DocumentUploadForm(forms.ModelForm):
         fields = ['document_type', 'document_file']
         exclude = ['employee']
 
+    
+    def __init__(self, *args, **kwargs):
+        super(DocumentUploadForm, self).__init__(*args, **kwargs)
+    
+
 
 class LeaveRequestForm(forms.ModelForm):
     class Meta:
@@ -179,3 +184,17 @@ class JobForm(forms.ModelForm):
                 'data-placeholder': 'Choose skills...'
             })
         }
+
+     
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance', None)
+
+        super(JobForm, self).__init__(*args, **kwargs)
+
+        # Check if the instance exists and populate it with 'required_skills' field
+        # if self.instance and  self.instance.pk:
+        #     self.fields['required_skills'].initial = self.instance.required_skills.all()
+        
+        if instance:  # Prepopulate the required_skills field
+            self.fields['required_skills'].queryset = Skill.objects.all()
+            self.initial['required_skills'] = instance.required_skills.all()   

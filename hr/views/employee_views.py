@@ -224,9 +224,12 @@ class JobUpdateView(LoginRequiredMixin, UpdateView):
         }
         context['categorized_skills'] = categorized_skills
         context['use_quill'] = True
+
         return context
     
     def form_valid(self, form):
+        print(self.initial)
+
         messages.success(self.request, f"Job {form.instance.job_title} was updated successfully")
         return super().form_valid(form)
     

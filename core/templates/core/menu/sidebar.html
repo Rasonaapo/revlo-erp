@@ -91,7 +91,7 @@
       <li class="menu-item">
         <a href="forms-pickers.html#menuMaps" data-bs-toggle="collapse" class="menu-link">
             <span class="menu-icon"><i data-feather="map"></i></span>
-            <span class="menu-text"> Operations </span>
+            <span class="menu-text"> Administrations </span>
             <span class="menu-arrow"></span>
         </a>
         <div class="collapse" id="menuMaps">
@@ -103,7 +103,13 @@
                 </li>
 
                 <li class="menu-item">
-                    <a class="menu-link">
+                  <a href="{% url 'vendor-list' %}" class="menu-link">
+                      <span class="menu-text">Vendors</span>
+                  </a>
+              </li>
+
+                <li class="menu-item">
+                    <a href="{% url 'document-list' %}" class="menu-link">
                         <span class="menu-text">Business Documents</span>
                     </a>
                 </li>

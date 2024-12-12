@@ -522,7 +522,7 @@ class Payroll(models.Model):
 
     process_month = models.CharField(max_length=12, choices=PAYROLL_MONTH, verbose_name="Processing Month")  # 1 to 12
     process_year = models.PositiveIntegerField(verbose_name="Processing Year")
-    description = models.TextField(blank=True, null=True, verbose_name="Payroll Description")
+    description = models.CharField(max_length=255, blank=True, null=True, verbose_name="Payroll Description")
     active = models.BooleanField(default=True, verbose_name="Is Active")
     posted = models.BooleanField(default=False, verbose_name="Is Posted")
     salary_grade = models.ManyToManyField('hr.SalaryGrade', blank=True, related_name="payrolls", verbose_name="Salary Grades")
