@@ -2,7 +2,6 @@ from typing import Any
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
-from decimal import Decimal
 from django.utils.timezone import now
 from datetime import timedelta, date
 from django.db import transaction
