@@ -148,12 +148,18 @@
               <div class="collapse" id="inventorySubMenu">
                 <ul class="sub-menu">
   
-                  <!-- <li class="menu-item">
-                    <a href="" class="menu-link">
-                      <span class="menu-text">Products</span>
+                  <li class="menu-item">
+                    <a href="{% url 'inventory-list' %}" class="menu-link">
+                      <span class="menu-text">Inventories</span>
                     </a>
                   </li>
-                   -->
+
+                   <li class="menu-item">
+                    <a href="{% url 'product-category-list' %}" class="menu-link">
+                      <span class="menu-text">Product Categories</span>
+                    </a>
+                  </li>
+                   
   
                 </ul>
               </div>

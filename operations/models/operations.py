@@ -5,6 +5,15 @@ from .warehouse import Warehouse
 from django.utils import timezone
 from decimal import Decimal
 
+class UnitType(models.Model):
+    name = models.CharField(max_length=50, unique=True)  # e.g. Box, Pack, Single
+    description = models.TextField(null=True, blank=True)
+    is_custom_measure = models.BooleanField(default=False, verbose_name='Is Custom Measure', help_text="Can be used for custom measurements")
+    conversion_rate = models.DecimalField(max_digits=10, verbose_name='Conversion Rate', decimal_places=3, default=1.0, help_text="Conversion rate to base unit (e.g. 1 olonka = 6 cups)")
+
+    def __str__(self):
+        return self.name
+    
 class ProductCategory(models.Model):
     category_name = models.CharField(max_length=255, unique=True, verbose_name="Category Name")
     description = models.TextField(null=True)
@@ -32,15 +41,15 @@ class Product(models.Model):
     ]
 
     product_name = models.CharField(max_length=255, unique=True, verbose_name="Product Name")
-    barcode = models.CharField(max_length=255, unique=True, null=True)
     description = models.TextField(null=True)
     product_category = models.ForeignKey('ProductCategory', on_delete=models.CASCADE, related_name="products", verbose_name="Product Category")
-    variant = models.CharField(max_length=120, null=True, blank=True, verbose_name="Product Variant")
     brand = models.CharField(max_length=120, null=True, blank=True, help_text="Brand or Manufacturer of the product", verbose_name="Brand")
     weight = models.FloatField(null=True, blank=True, verbose_name="Weight")
     weight_unit = models.CharField(max_length=3,  choices=WEIGHT_UNITS, default='kg', verbose_name="Weight Unit")
-    cost_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Cost Price", help_text="Cost price per unit")
-    sale_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Sale Price", help_text="Selling price per unit")
+    is_composite = models.BooleanField(default=False, verbose_name='Is Composite', help_text="Whether product can be broken down into smaller units")
+    is_divisible = models.BooleanField(default=False, verbose_name='Is Divisible', help_text="Can be sold in custom measured quantities (e.g. sugar by cups)")
+    base_unit = models.ForeignKey('UnitType', related_name='products', verbose_name='Base Unit', null=True, blank=True, on_delete=models.PROTECT, 
+                                 help_text="Smallest unit for divisible products (e.g. cup for sugar)")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -72,9 +81,96 @@ class Product(models.Model):
         if self.weight is not None and self.weight <= 0:
             raise ValidationError(_("Weight must be a positive number"))
 
+class ProductUnit(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='units')
+    unit_type = models.ForeignKey('UnitType', on_delete=models.PROTECT, related_name='product_units', verbose_name='Unit Type')
+    barcode = models.CharField(max_length=255, null=True, unique=True)
+    quantity_per_unit = models.PositiveIntegerField(verbose_name='Quantity Per Unit', help_text="Number of smaller units in this unit type")
+    cost_price = models.DecimalField(verbose_name='Cost Price', max_digits=10, decimal_places=2)
+    sale_price = models.DecimalField(verbose_name='Sale Price', max_digits=10, decimal_places=2)
+    is_purchasable = models.BooleanField(default=True, verbose_name='Is Purchasable', help_text="Can be purchased from supplier")
+    is_sellable = models.BooleanField(default=True, verbose_name='Is Sellable', help_text="Can be sold to customers")
+    parent_unit = models.ForeignKey('self', null=True, blank=True, verbose_name='Parent Unit', on_delete=models.PROTECT, 
+                                  help_text="Next larger unit type")
+
+    class Meta:
+        unique_together = ['product', 'unit_type']
+        indexes = [
+            models.Index(fields=['product']),
+            models.Index(fields=['unit_type']),
+            models.Index(fields=['product', 'unit_type'])
+        ]
+
+    def get_price_per_base_unit(self):
+        """Calculate price per base unit (e.g. price per cup)"""
+        if self.product.is_divisible:
+            conversion = self.unit_type.conversion_rate
+            return self.sale_price / conversion
+        return self.sale_price
+
+    def calculate_price_for_quantity(self, quantity, unit_type=None):
+        """Calculate price for custom measured quantity"""
+        if not self.product.is_divisible:
+            return self.sale_price * quantity
+            
+        if unit_type:
+            conversion = unit_type.conversion_rate
+            base_price = self.get_price_per_base_unit()
+            return base_price * (conversion * quantity)
+        return self.get_price_per_base_unit() * quantity
+
+    def clean(self):
+        if self.cost_price <= 0:
+            raise ValidationError("Cost price must be positive")
+        if self.sale_price <= 0:
+            raise ValidationError("Sale price must be positive")
+        if self.cost_price >= self.sale_price:
+            raise ValidationError("Cost price must be less than sale price")
+
+class UnitConversion(models.Model):
+    from_unit = models.ForeignKey('UnitType', verbose_name='From Product Unit', on_delete=models.PROTECT, related_name='conversions_from')
+    to_unit = models.ForeignKey('UnitType', verbose_name='To Product Unit', on_delete=models.PROTECT, related_name='conversions_to')
+    conversion_factor = models.DecimalField(max_digits=10, decimal_places=3)
+    
+    class Meta:
+        unique_together = ['from_unit', 'to_unit']
+        
+    def clean(self):
+        if self.from_unit == self.to_unit:
+            raise ValidationError(_("Cannot convert to same unit type"))
+        if self.conversion_factor <= 0:
+            raise ValidationError(_("Conversion factor must be positive"))
+
+class StockUnitConversion(models.Model):
+    inventory = models.ForeignKey('Inventory', on_delete=models.CASCADE)
+    from_unit = models.ForeignKey('ProductUnit', verbose_name='From Product Unit',  on_delete=models.PROTECT, related_name='conversions_from')
+    to_unit = models.ForeignKey('ProductUnit', verbose_name='To Product Unit', on_delete=models.PROTECT, related_name='conversions_to')
+    from_quantity = models.DecimalField(max_digits=10, verbose_name='From Quantity', decimal_places=3)
+    to_quantity = models.DecimalField(max_digits=10, verbose_name='To Quantity', decimal_places=3)
+    converted_at = models.DateTimeField(auto_now_add=True)
+    
+    def clean(self):
+        if self.from_unit.unit_type.conversion_rate <= self.to_unit.unit_type.conversion_rate:
+            raise ValidationError(_("Can only convert to smaller units"))
+        if self.from_quantity <= 0:
+            raise ValidationError(_("Quantity must be positive"))
+            
+    def save(self, *args, **kwargs):
+        if not self.pk:  # New conversion
+            # Calculate conversion
+            from_rate = self.from_unit.unit_type.conversion_rate
+            to_rate = self.to_unit.unit_type.conversion_rate
+            self.to_quantity = self.from_quantity * (from_rate / to_rate)
+            
+            # Update inventory
+            self.inventory.reduce_stock(self.from_unit, self.from_quantity)
+            self.inventory.add_stock(self.to_unit, self.to_quantity)
+            
+        super().save(*args, **kwargs)
+
 class Inventory(models.Model):
     warehouse = models.ForeignKey('operations.Warehouse', on_delete=models.CASCADE, related_name="inventories")
-    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name="inventories")
+    product_unit = models.ForeignKey('ProductUnit', default=1, on_delete=models.PROTECT, verbose_name='Product Unit', related_name="inventories")
     min_stock_level = models.PositiveIntegerField(verbose_name="Minimum Stock Level")
     max_stock_level = models.PositiveIntegerField(verbose_name="Maximum Stock Level")
     reorder_level = models.PositiveIntegerField(verbose_name="Reorder Level")
@@ -84,13 +180,48 @@ class Inventory(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('warehouse', 'product')
+        unique_together = ('warehouse', 'product_unit')
         verbose_name_plural = "Inventories"
         indexes = [
             models.Index(fields=['warehouse']),
-            models.Index(fields=['product']),
+            models.Index(fields=['product_unit']),
+            models.Index(fields=['warehouse', 'product_unit'])
         ]
+    
+    # add methods to increase and reduce stock
+    def reduce_stock(self, quantity):
+        """Reduce stock quantity"""
+        if quantity <= 0:
+            raise ValidationError(_("Quantity must be positive"))
+        if self.quantity < quantity:
+            raise ValidationError(_("Insufficient stock"))
+        
+        self.quantity -= quantity
+        self.save()
+        
+        return self.quantity
 
+    def add_stock(self, quantity):
+        """Add stock quantity"""
+        if quantity <= 0:
+            raise ValidationError(_("Quantity must be positive"))
+            
+        self.quantity += quantity
+        self.save()
+        
+        return self.quantity
+
+    def check_stock_level(self):
+        """Check if stock needs reordering"""
+        return self.quantity <= self.reorder_level
+    
+ 
+    def get_product_name(self):
+        return self.product_unit.product.product_name
+    
+    def get_unit_type(self):
+        return self.product_unit.unit_type.name
+    
     def clean(self):
         super().clean()
 

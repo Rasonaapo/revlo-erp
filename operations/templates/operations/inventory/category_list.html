@@ -1,0 +1,85 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'plugin/libs/datatables.net/css/jquery.dataTables.min.css' %} ">
+<link href="{% static 'plugin/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'css/select2.css' %}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugin/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugin/libs/select2/js/select2.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <p>
+                    <a href="{% url 'product-category-add' %}">
+                        <button type="button" class="btn btn-info rounded-pill waves-effect waves-light">
+                            <span class="btn-label"><i class="mdi mdi-plus-circle"></i></span>New Category
+                        </button>
+                    </a>
+                </p>
+
+                <table id="categoryTable" class="table table-hover dt-responsive nowrap w-100">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Category Name</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Created on</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    $(document).ready(function(){
+        $('#categoryTable').DataTable({
+            "processing": true,
+            "serverSide": true,
+            "ajax": {
+                "url": "{% url 'product-category-list-api' %}",
+                "type": "GET"
+            },
+            "columns": [
+                { 
+                    "data": null,
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                {"data": "category_name"},
+                {"data": "description"},
+                {"data": "is_active"},
+                {"data": "created_at"},
+                { "data": 'id', "orderable": false, "render": function(data, type, row) {
+                    const id = row.id
+                    let updateURL = `{% url 'product-category-update' 0 %}`.replace('0', id)
+                    let deleteURL = `{% url 'product-category-delete' 0 %}`.replace('0', id)
+                    let detailURL = `{% url 'product-category-detail' 0 %}`.replace('0', id)
+
+                    return `
+                        <a href="${updateURL}" title="Edit category"><button class="btn btn-xs btn-outline-warning rounded-pill waves-effect waves-light"><i class="fe-edit"></i></button></a>
+                        <a href="${detailURL}" title="Product category detail"><button class="btn btn-xs btn-outline-success rounded-pill waves-effect waves-light"><i class="fe-eye"></i></button></a>
+                        <a href="${deleteURL}" title="Delete category"><button class="btn btn-xs btn-outline-danger rounded-pill waves-effect waves-light"><i class="fe-trash-2"></i></button></a>`;
+                }},
+            ],
+            "order": [[4, "desc"]]
+        });
+    })
+</script>
+{% endblock %}

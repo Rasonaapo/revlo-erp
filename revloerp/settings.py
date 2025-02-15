@@ -109,6 +109,10 @@ DATABASES = {
         'PASSWORD': env('DATABASE_PASSWORD'),
         'HOST': env('DATABASE_HOST'),
         'PORT': env('DATABASE_PORT'),
+        'OPTIONS': {
+            'sql_mode': 'STRICT_TRANS_TABLES',
+            'charset': 'utf8mb4'
+        }
     }
 }
 

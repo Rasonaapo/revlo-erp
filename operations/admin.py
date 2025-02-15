@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    ProductCategory, Product, Inventory, Customer, Supplier,
+    ProductCategory, Product, ProductUnit, UnitType, Inventory, Customer, Supplier,
     PurchaseOrder, PurchaseOrderDetail, InventoryDamage, Transfer,
     Van, VanMaintenance, DeliveryRoute, DeliverySchedule
 )
@@ -12,15 +12,27 @@ class ProductCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('product_name', 'product_category', 'cost_price', 'sale_price')
+    list_display = ('product_name', 'product_category', 'brand', 'is_composite')
     search_fields = ('product_name', 'category__category_name')
-    list_filter = ('product_category',)
+    list_filter = ('product_category', 'is_composite',)
+
+@admin.register(UnitType)  # Add this
+class UnitTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+
+@admin.register(ProductUnit)  # Add this
+class ProductUnitAdmin(admin.ModelAdmin):
+    list_display = ('product', 'unit_type', 'barcode', 'quantity_per_unit', 'cost_price', 'sale_price')
+    search_fields = ('product__product_name', 'barcode')
+    list_filter = ('unit_type', 'is_purchasable', 'is_sellable')
 
 @admin.register(Inventory)
 class InventoryAdmin(admin.ModelAdmin):
-    list_display = ('warehouse', 'product', 'quantity', 'min_stock_level', 'max_stock_level')
-    search_fields = ('warehouse__warehouse_name', 'product__product_name')
-    list_filter = ('warehouse', 'product')
+    list_display = ('warehouse', 'get_product_name', 'get_unit_type', 'quantity', 'min_stock_level', 'max_stock_level')
+    search_fields = ('warehouse__warehouse_name', 'product_unit__product__product_name')
+    list_filter = ('warehouse', 'product_unit__product')
+
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):

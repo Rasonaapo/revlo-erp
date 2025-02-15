@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255, unique=True, verbose_name='Vendor Name')),
                 ('email', models.EmailField(max_length=254, unique=True, verbose_name='Email Address')),
-                ('phone_number', models.TextField(blank=True, null=True, unique=True, verbose_name='Phone Number')),
+                ('phone_number', models.CharField(max_length=15, blank=True, null=True, unique=True, verbose_name='Phone Number')),
                 ('address', models.CharField(max_length=255, null=True)),
                 ('notes', django_quill.fields.QuillField(blank=True, null=True, verbose_name='Notes')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

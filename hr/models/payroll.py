@@ -17,7 +17,7 @@ class SalaryGrade(models.Model):
         # We will add more currencies as needed
     ]
     grade = models.CharField(max_length=24 )
-    step =  models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(2)])
+    step =  models.IntegerField(null=True, validators=[MinValueValidator(1), MaxValueValidator(2)])
     grade_step = models.ForeignKey('SalaryStep', null=True, on_delete=models.CASCADE, related_name='salary_grades', verbose_name='Step')
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Basic Salary')
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='GHS')

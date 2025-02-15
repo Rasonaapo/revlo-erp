@@ -74,7 +74,7 @@ class Vendor(models.Model):  # Example Vendor/Supplier table
     name = models.CharField(max_length=255, unique=True, verbose_name=_("Vendor Name"))
     email = models.EmailField(unique=True, null=True, blank=True, verbose_name='Email Address')
     phone_number = models.CharField(max_length=15, blank=True, unique=True, null=True, verbose_name=_("Phone Number"))
-    address = models.TextField(blank=True, unique=True, null=True, verbose_name=_("Address Info"), help_text=_("Provide detailed address, this may include digital address or post address"))
+    address = models.TextField(blank=True, null=True, verbose_name=_("Address Info"), help_text=_("Provide detailed address, this may include digital address or post address"))
     notes = QuillField(null=True, blank=True, verbose_name=_("Notes"))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

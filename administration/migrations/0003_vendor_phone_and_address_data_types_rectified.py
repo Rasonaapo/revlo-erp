@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='vendor',
             name='address',
-            field=models.TextField(blank=True, help_text='Provide detailed address, this may include digital address or post address', null=True, unique=True, verbose_name='Address Info'),
+            field=models.TextField(blank=True, help_text='Provide detailed address, this may include digital address or post address', null=True, verbose_name='Address Info'),
         ),
         migrations.AlterField(
             model_name='vendor',
